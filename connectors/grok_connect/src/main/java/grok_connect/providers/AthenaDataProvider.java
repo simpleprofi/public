@@ -39,13 +39,13 @@ public class AthenaDataProvider extends JdbcDataProvider {
         return false;
     }
 
-
-    public String getConnectionString(DataConnection conn) {
-        String connString = super.getConnectionString(conn);
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
+        String connString = getConnectionString(conn);
         connString = connString.endsWith(";") ? connString : connString + ";";
         connString += "User=" + conn.credentials.parameters.get("AccessKey") + ";" +
                 "Password=" + conn.credentials.parameters.get("SecretKey");
-        return connString;
+        return CustomDriverManager.getConnection(connString, driverClassName);
     }
 
     public String getConnectionStringImpl(DataConnection conn) {

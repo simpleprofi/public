@@ -30,6 +30,12 @@ public class AccessDataProvider extends JdbcDataProvider {
         descriptor.aggregations.add(new AggrFunctionInfo(Stats.STDEV, "stdev(#)", Types.dataFrameNumericTypes));
     }
 
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
+        return CustomDriverManager.getConnection(getConnectionString(conn), conn.credentials.getLogin(),
+                conn.credentials.getPassword(), driverClassName);
+    }
+
     public String getConnectionStringImpl(DataConnection conn) {
         return "jdbc:ucanaccess://" + conn.getDb();
     }

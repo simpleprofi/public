@@ -26,11 +26,12 @@ public class TeradataDataProvider extends JdbcDataProvider {
         }};
     }
 
-    public Properties getProperties(DataConnection conn) {
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
         java.util.Properties properties = defaultConnectionProperties(conn);
         if (!conn.hasCustomConnectionString() && conn.ssl())
             properties.setProperty("ENABLESSL", "true");
-        return properties;
+        return CustomDriverManager.getConnection(getConnectionString(conn), properties, driverClassName);
 
     }
 

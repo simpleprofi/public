@@ -49,7 +49,8 @@ public class MySqlDataProvider extends JdbcDataProvider {
         descriptor.aggregations.add(new AggrFunctionInfo(Stats.STDEV, "std(#)", Types.dataFrameNumericTypes));
     }
 
-    public Properties getProperties(DataConnection conn) {
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
         java.util.Properties properties = defaultConnectionProperties(conn);
         if (!conn.hasCustomConnectionString()) {
             properties.setProperty("zeroDateTimeBehavior", "convertToNull");
@@ -58,7 +59,7 @@ public class MySqlDataProvider extends JdbcDataProvider {
                 properties.setProperty("verifyServerCertificate", "false");
             }
         }
-        return properties;
+        return CustomDriverManager.getConnection(getConnectionString(conn), properties, driverClassName);
     }
 
     public String getConnectionStringImpl(DataConnection conn) {

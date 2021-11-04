@@ -21,13 +21,18 @@ public class CassandraDataProvider extends JdbcDataProvider {
         descriptor.aggregations = null;
     }
 
-    public Properties getProperties(DataConnection conn)  {
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
+
+        Logger logger = Logger.getLogger("com.github.cassandra.jdbc");
+        logger.setLevel(Level.ERROR);
+
         java.util.Properties properties = defaultConnectionProperties(conn);
         if (!conn.hasCustomConnectionString() && conn.ssl()) {
             properties.setProperty("SSLMode", "1");
             properties.setProperty("UseSslIdentityCheck", "0");
         }
-        return properties;
+        return CustomDriverManager.getConnection(getConnectionString(conn), properties, driverClassName);
     }
 
     public String getConnectionStringImpl(DataConnection conn) {

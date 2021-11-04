@@ -20,12 +20,12 @@ public class VirtuosoDataProvider extends JdbcDataProvider {
         descriptor.aggregations = null;
     }
 
-    @Override
-    public String getConnectionString(DataConnection conn) {
-        String connString = super.getConnectionString(conn);
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
+        String connString = getConnectionString(conn);
         connString = connString.endsWith("/") ? connString : connString + "/";
         connString += "UID=" + conn.credentials.getLogin() + "/PWD=" + conn.credentials.getPassword();
-        return connString;
+        return CustomDriverManager.getConnection(connString, conn.credentials.getLogin(), conn.credentials.getPassword(), driverClassName);
     }
 
     public String getConnectionStringImpl(DataConnection conn) {

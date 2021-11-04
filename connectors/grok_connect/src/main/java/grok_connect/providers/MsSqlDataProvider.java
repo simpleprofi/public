@@ -51,11 +51,12 @@ public class MsSqlDataProvider extends JdbcDataProvider {
         descriptor.aggregations.add(new AggrFunctionInfo(Stats.STDEV, "stdev(#)", Types.dataFrameNumericTypes));
     }
 
-    public String getConnectionString(DataConnection conn) {
-        String connString = super.getConnectionString(conn);
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
+        String connString = getConnectionString(conn);
         connString = connString.endsWith(";") ? connString : connString + ";";
         connString += "user=" + conn.credentials.getLogin() + ";password=" + conn.credentials.getPassword();
-        return connString;
+        return CustomDriverManager.getConnection(connString, driverClassName);
     }
 
     public String getConnectionStringImpl(DataConnection conn) {
@@ -68,7 +69,7 @@ public class MsSqlDataProvider extends JdbcDataProvider {
     }
 
     public DataFrame getSchema(DataConnection connection, String schema, String table)
-            throws ClassNotFoundException, SQLException, ParseException, IOException, QueryCancelledByUser, GrokConnectException {
+            throws ClassNotFoundException, SQLException, ParseException, IOException, QueryCancelledByUser {
         FuncCall queryRun = new FuncCall();
         queryRun.func = new DataQuery();
         String db = connection.getDb();

@@ -15,7 +15,8 @@ public class MariaDbDataProvider extends MySqlDataProvider {
         descriptor.description = "Query MariaDB database";
     }
 
-    public Properties getProperties(DataConnection conn) {
+    public Connection getConnection(DataConnection conn) throws ClassNotFoundException, SQLException {
+        Class.forName(driverClassName);
         java.util.Properties properties = defaultConnectionProperties(conn);
         if (!conn.hasCustomConnectionString()) {
             properties.setProperty("zeroDateTimeBehavior", "convertToNull");
@@ -24,7 +25,7 @@ public class MariaDbDataProvider extends MySqlDataProvider {
                 properties.setProperty("trustServerCertificate", "true");
             }
         }
-        return properties;
+        return CustomDriverManager.getConnection(getConnectionString(conn), properties, driverClassName);
     }
 
     public String getConnectionStringImpl(DataConnection conn) {
