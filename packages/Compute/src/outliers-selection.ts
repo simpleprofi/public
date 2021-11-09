@@ -2,6 +2,7 @@ import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 import {_package} from './package';
+import {std, mean, abs} from 'mathjs';
 
 export async function selectOutliersManually(inputData: DG.DataFrame) {
   const IS_OUTLIER_COL_LABEL = 'isOutlier';
@@ -18,11 +19,14 @@ export async function selectOutliersManually(inputData: DG.DataFrame) {
       .add(DG.Column.fromStrings(OUTLIER_REASON_COL_LABEL, Array.from({length: inputData.rowCount}, () => '')));
   }
 
+  const initialData = inputData.clone();
+
   const reasonInput = ui.textInput('Reason', '');
   const scatterPlot = DG.Viewer.scatterPlot(inputData, {
     'color': OUTLIER_REASON_COL_LABEL,
     'lassoTool': true,
     'legendVisibility': 'Never',
+    'filterByZoom': false,
   });
   scatterPlot.root.style.height = '100%';
   scatterPlot.root.style.width = '100%';
@@ -44,6 +48,7 @@ export async function selectOutliersManually(inputData: DG.DataFrame) {
         for (let i = 0; i < inputData.rowCount; i++) {
           if (inputData.columns.byName(OUTLIER_REASON_COL_LABEL).get(i) === reason) {
             inputData.columns.byName(OUTLIER_REASON_COL_LABEL).set(i, '');
+            inputData.columns.byName(IS_OUTLIER_COL_LABEL).set(i, false);
           }
         }
         updateTable();
@@ -77,6 +82,19 @@ export async function selectOutliersManually(inputData: DG.DataFrame) {
     Object.keys(uniqueValues).map((key: string) => {
       groupsListGrid.dataFrame?.rows.addNew([key, uniqueValues[key], '']);
     });
+  };
+
+  let shouldCancel = true;
+
+  const cancelAllChanges = () => {
+    if (shouldCancel) {
+      (inputData.columns as DG.ColumnList).byName(IS_OUTLIER_COL_LABEL).init(
+        (index) => initialData.get(IS_OUTLIER_COL_LABEL, index),
+      );
+      (inputData.columns as DG.ColumnList).byName(OUTLIER_REASON_COL_LABEL).init(
+        (index) => initialData.get(OUTLIER_REASON_COL_LABEL, index),
+      );
+    }
   };
 
   const addOutlierGroupBtn = ui.button(
@@ -119,63 +137,35 @@ export async function selectOutliersManually(inputData: DG.DataFrame) {
   );
 
   const autoOutlierGroupBtn = ui.button(
-    'AUTO...',
+    'STDDEV RULE...',
     () => {
       if (isInnerModalOpened) return;
 
-      const INPUT_COLUMNS_SIZE = (inputData.columns as DG.ColumnList).length -
-      (!inputData.columns.byName(IS_OUTLIER_COL_LABEL) ? 0 : 1) -
-      (!inputData.columns.byName(OUTLIER_REASON_COL_LABEL) ? 0 : 1);
-
-      const options = DG.Func.find({name: 'ExtractRows'}).map((func) => func.name);
-      const detectionChoiceInput = ui.choiceInput('Function', '', options);
-      let selectedFunc: DG.FuncCall;
-      detectionChoiceInput.onChanged(() => {
-        selectedFunc = DG.Func.find({name: detectionChoiceInput.value})[0]
-          .prepare();
-        selectedFunc.getEditor(false, false).then((editor) => {
-          autoDetectionDialog.clear();
-          autoDetectionDialog.add(ui.divV([detectionChoiceInput.root, editor]));
-        });
-      });
-
-      const autoDetectionDialog = ui.dialog('Automatic detection')
-        .add(detectionChoiceInput.root)
+      const intInput = ui.intInput('N', 3);
+      const columnInput = ui.columnInput('Values', inputData, null);
+      const autoDetectionDialog = ui.dialog('Edit standard deviation rule')
+        .add(intInput.root)
+        .add(columnInput.root)
         .onOK(()=>{
-          selectedFunc.call().then((result) => {
-            const selectedDf = (result.outputs.result as DG.DataFrame);
-            selectedDf.col(IS_OUTLIER_COL_LABEL)?.init(() => true);
-            selectedDf.col(OUTLIER_REASON_COL_LABEL)?.init(selectedFunc.func.name);
-            const mergedData = inputData.join(
-              selectedDf,
-              [...Array(INPUT_COLUMNS_SIZE).keys()]
-                .map((idx) => (inputData.columns as DG.ColumnList).byIndex(idx).name),
-              [...Array(INPUT_COLUMNS_SIZE).keys()]
-                .map((idx) => (selectedDf.columns as DG.ColumnList).byIndex(idx).name),
-              [...Array(INPUT_COLUMNS_SIZE).keys()]
-                .map((idx) => (inputData.columns as DG.ColumnList).byIndex(idx).name),
-              [...Array(2).keys()]
-                .map((idx) => (idx + INPUT_COLUMNS_SIZE))
-                .map((idx) => (selectedDf.columns as DG.ColumnList).byIndex(idx).name),
-              DG.JOIN_TYPE.OUTER,
-              false,
-            );
-            const selected = DG.BitSet.create(inputData.rowCount, (idx) => (
-              (mergedData.columns as DG.ColumnList).byIndex(INPUT_COLUMNS_SIZE).get(idx)
-            ));
-            selected.getSelectedIndexes().forEach((selectedIndex: number) => {
-              inputData.set(IS_OUTLIER_COL_LABEL, selectedIndex, true);
-              inputData.set(OUTLIER_REASON_COL_LABEL, selectedIndex, selectedFunc.func.name);
-            });
-            updateTable();
+          const values = [...columnInput.value.values()];
+          const meanValue = mean(values);
+          const stddev = std(values);
+          inputData.selection.init((index)=> abs(meanValue - values[index]) > stddev*intInput.value);
+          inputData.selection.getSelectedIndexes().forEach((selectedIndex: number) => {
+            inputData.set(IS_OUTLIER_COL_LABEL, selectedIndex, true);
+            inputData.set(OUTLIER_REASON_COL_LABEL, selectedIndex, `${intInput.value}x stddev rule`);
           });
+          updateTable();
+          inputData.selection.setAll(false);
         })
         .show();
       autoDetectionDialog.onClose.subscribe(() => isInnerModalOpened = false);
       isInnerModalOpened = true;
     },
-    'Choose function to select the outliers',
+    'Edit standard deviation rule',
   );
+
+  inputData.selection.setAll(false);
 
   inputData.onSelectionChanged.subscribe(() => {
     if (inputData.selection.trueCount === 0) {
@@ -192,11 +182,11 @@ export async function selectOutliersManually(inputData: DG.DataFrame) {
   removeOutlierGroupBtn.classList.add('disabled');
 
   const result = new Promise<{augmentedInput: DG.DataFrame, editedInput: DG.DataFrame}>((resolve, reject) => {
-    ui.dialog({title: 'Outliers selection', helpUrl: `${_package.webRoot}/help/outliers_selection/main.md`})
+    const selectionDialog = ui.dialog({title: 'Select outliers', helpUrl: `${_package.webRoot}/help/outliers_selection/main.md`})
       .add(
         ui.info(
           ui.div([
-            ui.p('To select outliers - hold the “SHIFT” key and start to draw a freehand selection on the scatterplot area'),
+            ui.p('Hold the “SHIFT” key and start to draw a freehand selection on the scatterplot area'),
           ]),
         ),
       )
@@ -205,24 +195,37 @@ export async function selectOutliersManually(inputData: DG.DataFrame) {
           ui.block75([scatterPlot.root]),
           ui.block25([
             ui.divV([
-              groupsListGrid.root,
               ui.divH([
-                ui.block75([addOutlierGroupBtn, removeOutlierGroupBtn]),
-                ui.block25([autoOutlierGroupBtn]),
+                addOutlierGroupBtn, removeOutlierGroupBtn, autoOutlierGroupBtn,
               ], {style: {'text-align': 'center'}}),
-            ], {style: {height: '70%'}}),
+              groupsListGrid.root,
+            ], {style: {height: '75%'}}),
           ]),
         ], {style: {height: '100%'}}),
       )
       .onOK(() => {
+        shouldCancel = false;
         const editedInput = inputData.clone();
         editedInput.rows.filter((row) => !inputData.get(IS_OUTLIER_COL_LABEL, row.idx));
         resolve({augmentedInput: inputData, editedInput});
       })
       .onCancel(() => {
-        reject(new Error('Manual outliers selection is aborted'));
-      })
-      .show({width: 950, height: 800});
+        const editedInput = initialData.clone();
+        editedInput.rows.filter((row) => !initialData.get(IS_OUTLIER_COL_LABEL, row.idx));
+        cancelAllChanges();
+        resolve({augmentedInput: inputData, editedInput});
+      });
+
+    // TODO: change the resolving strategy after API update
+    // onClose is called before onOK or onCancel, thus, the timeout is requierd
+    selectionDialog.onClose.subscribe(() =>
+      setTimeout(()=>{
+        const editedInput = initialData.clone();
+        editedInput.rows.filter((row) => !initialData.get(IS_OUTLIER_COL_LABEL, row.idx));
+        cancelAllChanges();
+        resolve({augmentedInput: inputData, editedInput});
+      }, 100));
+    selectionDialog.show({width: 1000, height: 800});
   });
 
   return result;

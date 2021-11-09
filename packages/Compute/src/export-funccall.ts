@@ -15,32 +15,21 @@ export function exportFuncCall(call: DG.FuncCall) {
     return DG.TYPES_SCALAR.has(type);
   };
 
-  const isDataframe = (type: DG.TYPE) => (type === DG.TYPE.DATA_FRAME);
+  const isDataFrame = (type: DG.TYPE) => (type === DG.TYPE.DATA_FRAME);
 
-  const dfInputs = call.func.inputs.filter(
-    (input: DG.Property) => isDataframe(input.propertyType),
-  ) as DG.Property[];
+  const dfInputs = call.func.inputs.filter((input) => isDataFrame(input.propertyType));
+  const scalarInputs = call.func.inputs.filter((input) => isScalarType(input.propertyType));
+  const dfOutputs = call.func.outputs.filter((output) => isDataFrame(output.propertyType));
+  const scalarOutputs = call.func.outputs.filter((output) => isScalarType(output.propertyType));
 
-  const scalarInputs = call.func.inputs.filter(
-    (input: DG.Property) => isScalarType(input.propertyType),
-  ) as DG.Property[];
-
-  const dfOutputs = call.func.outputs.filter(
-    (output: DG.Property) => isDataframe(output.propertyType),
-  ) as DG.Property[];
-
-  const scalarOutputs = call.func.outputs.filter(
-    (output: DG.Property) => isScalarType(output.propertyType),
-  ) as DG.Property[];
-
-  // dfInputs.forEach((dfInput) => {
-  //   const currentDfSheet = exportWorkbook.addWorksheet(`Input - ${dfInput.name}`);
-  //   const currentDf = (call.inputs[dfInput.name] as DG.DataFrame);
-  //   currentDfSheet.addRow((currentDf.columns as DG.ColumnList).names());
-  //   for (let i = 0; i < currentDf.rowCount; i++) {
-  //     currentDfSheet.addRow([...currentDf.row(i).cells].map((cell: DG.Cell) => cell.value));
-  //   }
-  // });
+  dfInputs.forEach((dfInput) => {
+    const currentDfSheet = exportWorkbook.addWorksheet(`Input - ${dfInput.name}`);
+    const currentDf = (call.inputs[dfInput.name] as DG.DataFrame);
+    currentDfSheet.addRow((currentDf.columns as DG.ColumnList).names());
+    for (let i = 0; i < currentDf.rowCount; i++) {
+      currentDfSheet.addRow([...currentDf.row(i).cells].map((cell: DG.Cell) => cell.value));
+    }
+  });
 
   const inputScalarsSheet = exportWorkbook.addWorksheet('Input scalars');
   scalarInputs.forEach((scalarInput) => {
