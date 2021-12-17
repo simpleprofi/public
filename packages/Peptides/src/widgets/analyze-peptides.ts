@@ -63,6 +63,8 @@ export async function analyzePeptidesWidget(
   activityColumnChoice.fireChanged();
   activityScalingMethod.fireChanged();
 
+  grok.shell.info(activityScalingMethod.value);
+
   const startBtn = ui.button('Launch SAR', async () => {
     if (activityColumnChoice.value.type === DG.TYPE.FLOAT) {
       const progress = DG.TaskBarProgressIndicator.create('Loading SAR...');
@@ -80,14 +82,32 @@ export async function analyzePeptidesWidget(
     }
   });
 
-  const startCABtn = ui.button('Launch CA', await correlationAnalysis(
+  const startCABtn = ui.button('Launch CA', async () => {
+    if (activityColumnChoice.value.type === DG.TYPE.FLOAT) {
+      const progress = DG.TaskBarProgressIndicator.create('Loading correlation analysis...');
+
+      await correlationAnalysis(
+        tableGrid,
+        view,
+        currentDf,
+        col,
+        activityColumnChoice.value.name,
+        activityScalingMethod.value,
+      );
+
+      progress.close();
+    } else {
+      grok.shell.error('The activity column must be of floating point number type!');
+    }
+  });
+  /*correlationAnalysis(
     tableGrid,
     view,
     currentDf,
     col,
     activityColumnChoice.value.name,
     activityScalingMethod.value,
-  ));
+  ));*/
 
   const viewer = await currentDf.plot.fromType('peptide-logo-viewer');
 

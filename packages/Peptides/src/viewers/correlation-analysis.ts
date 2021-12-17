@@ -12,23 +12,29 @@ export async function correlationAnalysis(
   sequencesCol: DG.Column,
   activityColumnName: string,
   activityScalingMethod: string,
-): Promise<Function> {
-  return async () => {
-    const progress = DG.TaskBarProgressIndicator.create('Loading correlation analysis...');
+) {
+  /*): Function {
+  return async () => {*/
+  const activityCol = await _scaleColumn(currentDf.getCol(activityColumnName), activityScalingMethod);
+  const encDf = _encodeSequences(sequencesCol);
 
-    const activityCol = await _scaleColumn(currentDf.getCol(activityColumnName), activityScalingMethod);
-    const encDf = _encodeSequences(sequencesCol);
+  _insertColumns(currentDf, [DG.Column.fromList('double', `${activityColumnName}scaled`, activityCol.toList())]);
+  _insertColumns(currentDf, encDf.columns);
 
-    _insertColumns(currentDf, encDf);
-    _addModel(encDf, activityCol);
+  view.addViewer(DG.VIEWER.CORR_PLOT, {
+    xColumnNames: encDf.columns.names(),
+    yColumnNames: [activityColumnName],
+  });
 
-    view.addViewer(DG.VIEWER.CORR_PLOT, {
-      xColumnNames: encDf.columns.names(),
-      yColumnNames: [activityColumnName],
-    });
+  const [activityPred, activityPredName] = [_buildModel(encDf, activityCol), `${activityColumnName}pred`];
+  _insertColumns(currentDf, [DG.Column.fromList('double', activityPredName, activityPred)]);
 
-    progress.close();
-  };
+  view.addViewer(DG.VIEWER.SCATTER_PLOT, {
+    xColumnName: activityColumnName,
+    yColumnName: activityPredName,
+    showRegressionLine: true,
+  });
+  //};
 }
 
 async function _scaleColumn(column: DG.Column, method: string): Promise<DG.Column> {
@@ -40,7 +46,7 @@ async function _scaleColumn(column: DG.Column, method: string): Promise<DG.Colum
     return column;
   }
 
-  const formula = (method.startsWith('-') ? '0-' : '')+'Log10($[x])';
+  const formula = (method.startsWith('-') ? '0-' : '')+'Log10(${'+column.name+'})';
   const newCol = await column.applyFormula(formula);
 
   if (newCol == null) {
@@ -79,32 +85,34 @@ function _encodeSequences(sequencesCol: DG.Column): DG.DataFrame {
   return df;
 }
 
-function _insertColumns(targetDf: DG.DataFrame, srcDf: DG.DataFrame): DG.DataFrame {
-  for (const col of srcDf.columns) {
+function _insertColumns(targetDf: DG.DataFrame, columns: DG.Column[]): DG.DataFrame {
+  for (const col of columns) {
     targetDf.columns.add(col);
   }
   return targetDf;
 }
 
-function _addModel(features: DG.DataFrame, observations: DG.Column) {
+function _buildModel(features: DG.DataFrame, observations: DG.Column) {
   const nSamples = features.rowCount;
 
   assert(observations.length == nSamples, 'Samples count does not match number of observations.');
 
-  const nFeatures = features.columns.length;
-  const regression = new RandomForestRegression({
+  //const nFeatures = features.columns.length;
+  const regression = new RandomForestRegression(true);/*{
     nEstimators: 100,
-    maxFeatures: Math.sqrt(nFeatures) / nFeatures,
-  });
+    maxFeatures: 1, //Math.sqrt(nFeatures) / nFeatures,
+    useSampleBagging: true,
+  }*/
 
   const X = new Array(nSamples);
   const y = Array.from(observations.getRawData());
 
   for (let i = 0; i < nSamples; ++i) {
-    X[i] = Array.from(features.row(i).cells).map((v: DG.Cell) => v.value);
+    X[i] = Array.from(features.row(i).cells).map((v: DG.Cell) => v.value);//[y[i]+Math.random()]; //
   }
   regression.train(X, y);
   const pred = regression.predict(X);
   const RMSD = calculateEuclideanDistance(Vector.from(y), Vector.from(pred));
   console.log(RMSD);
+  return pred;
 }
