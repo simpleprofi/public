@@ -2,6 +2,7 @@ import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 import {Peptides} from '../peptides';
+import {correlationAnalysis} from '../viewers/correlation-analysis';
 
 export async function analyzePeptidesWidget(
   col: DG.Column, view: DG.TableView, tableGrid: DG.Grid, currentDf: DG.DataFrame,
@@ -79,9 +80,24 @@ export async function analyzePeptidesWidget(
     }
   });
 
+  const startCABtn = ui.button('Launch CA', await correlationAnalysis(
+    tableGrid,
+    view,
+    currentDf,
+    col,
+    activityColumnChoice.value.name,
+    activityScalingMethod.value,
+  ));
+
   const viewer = await currentDf.plot.fromType('peptide-logo-viewer');
 
   return new DG.Widget(
-    ui.divV([viewer.root, ui.inputs([activityColumnChoice, activityScalingMethod]), startBtn, histogramHost]),
+    ui.divV([
+      viewer.root,
+      ui.inputs([activityColumnChoice, activityScalingMethod]),
+      startBtn,
+      startCABtn,
+      histogramHost,
+    ]),
   );
 }
