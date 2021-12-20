@@ -1,6 +1,6 @@
 {
-	"name": "sqlite",
-	"beta": true,
+	"name": "@datagrok/sqlite",
+	"beta": false,
 	"friendlyName": "SQLite",
 	"version": "0.0.2",
 	"description": "",
