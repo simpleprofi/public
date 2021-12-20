@@ -131,11 +131,23 @@ export function fillRandomMatrix(dimension1: number, dimension2: number, scale: 
  * @param {Vector} q The second vector.
  * @return {number} Euclidean distance between the given vectors.
  */
-export function calculateEuclideanDistance(p: Vector, q: Vector): number {
+ export function calculateEuclideanDistance(p: Vector, q: Vector): number {
   const diff = vectorAdd(p, q, -1);
   const sqdiff = vectorSquare(diff);
   const sqdiffSumm = itemsSum(sqdiff);
   return Math.sqrt(sqdiffSumm);
+}
+
+/**
+ * Calculates Root-mean-square deviation of two vectors.
+ *
+ * @export
+ * @param {Vector} p The first vector.
+ * @param {Vector} q The second vector.
+ * @return {number} RMSD of the given vectors.
+ */
+ export function calculateRMSD(p: Vector, q: Vector): number {
+  return calculateEuclideanDistance(p, q)/Math.sqrt(p.length);
 }
 
 /**

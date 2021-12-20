@@ -16,11 +16,9 @@ module.exports = {
   },
   resolve: {
     extensions: ['.tsx', '.js', '.ts'],
-    fallback: {
-      'crypto': require.resolve('crypto-browserify'),
-      'stream': require.resolve('stream-browserify'),
-      'buffer': require.resolve('buffer/'),
-    },
+    // fallback: {
+    //   'os': require.resolve('os-browserify/browser'),
+    // },
   },
   devtool: 'inline-source-map',
   externals: {
