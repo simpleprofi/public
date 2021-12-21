@@ -27,10 +27,7 @@ export class ShuffleSplit {
   }
 
   public split(...items: any[][]): any[][][] {
-    console.log(items.length);
     const nsItems = items.map((v: any[]) => v.length);
-    console.log(nsItems);
-
 
     if (_std(nsItems) > 0) {
       throw new Error('Arrays must have the same lenghts.');
@@ -57,6 +54,31 @@ function _apply(items: any[], index: number[]): any[] {
   return items.map((_, i) => items[index[i]]);
 }
 
-export function bootstrap(X: number[][], y: number[], nRepeats: number = 100) {
+type Measure = (a: any, b: any) => number;
 
+interface Estimator {
+  fit(X: any[][], y: any[]): void;
+  predict(X: any[][]): any[];
+}
+
+export function bootstrap(X: number[][], y: number[], estimator: Estimator, measure: Measure, nRepeats: number = 100) {
+  const cv = new ShuffleSplit();
+  const scores = new Array(nRepeats).fill(0);
+
+  for (let i = 0; i < nRepeats; ++i) {
+    const [[XTrain, XTest], [yTrain, yTest]] = cv.split(X, y);
+    estimator.fit(XTrain, yTrain);
+    const yPred = estimator.predict(XTest);
+    scores[i] = measure(yTest, yPred);
+  }
+  return scores;
+}
+
+function _AUE(a: number[], b: number[]): number {
+  let sum = 0;
+
+  for (let i = 0; i < a.length; ++i) {
+    sum += Math.abs(a[i] - b[i]);
+  }
+  return sum / b.length;
 }
