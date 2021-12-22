@@ -54,27 +54,6 @@ class ShuffleSplit {
   }
 
   /**
-   * Generates a permutation of indices ranging from 0 to n-1.
-   *
-   * @protected
-   * @param {number} n Length of the permuted index.
-   * @return {number[]} The permutation.
-   * @memberof ShuffleSplit
-   */
-  protected _genPermutation(n: number): number[] {
-    const index = new Array(n).fill(0).map((_, i: number) => i);
-
-    for (let i = 0; i < n; ++i) {
-      const pos = n - i - 1;
-      const spos = Math.round(Math.random() * pos);
-      const tmp = index[spos];
-      index[spos] = index[pos];
-      index[pos] = tmp;
-    }
-    return index;
-  }
-
-  /**
    * Splits the arrays provided by training an test set.
    *
    * @param {...any[]} items The arrays to split.
@@ -89,7 +68,7 @@ class ShuffleSplit {
     }
 
     const nItems = nsItems[0];
-    const index = this._genPermutation(nItems);
+    const index = _genPermutation(nItems);
     const nTrain = Math.round(nItems * (1 - this.testRatio));
 
     return items.map(function(item) {
@@ -159,4 +138,37 @@ function _AUE(a: number[], b: number[]): number {
     sum += Math.abs(a[i] - b[i]);
   }
   return sum / b.length;
+}
+
+/**
+   * Generates a permutation of indices ranging from 0 to n-1.
+   *
+   * @protected
+   * @param {number} n Length of the permuted index.
+   * @return {number[]} The permutation.
+   */
+function _genPermutation(n: number): number[] {
+  const index = new Array(n).fill(0).map((_, i: number) => i);
+
+  for (let i = 0; i < n; ++i) {
+    const pos = n - i - 1;
+    const spos = Math.round(Math.random() * pos);
+    const tmp = index[spos];
+    index[spos] = index[pos];
+    index[pos] = tmp;
+  }
+  return index;
+}
+
+/**
+ * Permutes elements of an array.
+ *
+ * @export
+ * @param {any[]} items The array.
+ * @return {any[]} Permuted array.
+ */
+export function permuteElements(items: any[]): any[] {
+  const nItems = items.length;
+  const index = _genPermutation(nItems);
+  return _apply(items, index);
 }

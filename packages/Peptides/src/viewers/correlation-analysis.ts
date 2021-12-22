@@ -5,7 +5,7 @@ import {AlignedSequenceEncoder} from '@datagrok-libraries/utils/src/sequence-enc
 import {assert, calculateRMSD} from '@datagrok-libraries/utils/src/operations';
 import {Vector} from '@datagrok-libraries/utils/src/type-declarations';
 import {kendallsTau} from '@datagrok-libraries/statistics/src/correlation-coefficient';
-import {bootstrap} from '@datagrok-libraries/statistics/src/cross-validation';
+import {permuteElements, bootstrap} from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
 //const coresNumber = os.cpus().length;
@@ -24,8 +24,27 @@ export async function correlationAnalysis(
   _insertColumns(currentDf, [DG.Column.fromList('double', `${activityColumnName}scaled`, activityCol.toList())]);
   _insertColumns(currentDf, encDf.columns);
 
-  const [activityPred, activityPredName] = [await _buildModel(encDf, activityCol), `${activityColumnName}pred`];
+  const [activityPred, predErrorsTrue, predErrorsRandom] = await _buildModel(encDf, activityCol);
+  const activityPredName = `${activityColumnName}pred`;
+
   _insertColumns(currentDf, [DG.Column.fromList('double', activityPredName, activityPred)]);
+
+  const errorsDf = DG.DataFrame.fromColumns(
+    Array.from([[predErrorsTrue, 'trueAUE'], [predErrorsRandom, 'randomAUE']]).map(
+      (v) => DG.Column.fromFloat32Array(v[1], Float32Array.from(v[0])),
+    ),
+  );
+
+  view.addViewer(errorsDf.unpivot(errorsDf.columns.names(), errorsDf.columns.names(), 'AUE', 'Value').plot.box({
+    valueColumnName: 'Value',
+    categoryColumnName: 'AUE',
+    statistics: [
+      'min',
+      'max',
+      'avg',
+      'med',
+    ],
+  }));
 
   view.addViewer(DG.VIEWER.SCATTER_PLOT, {
     xColumnName: activityColumnName,
@@ -166,8 +185,8 @@ async function _buildModel(features: DG.DataFrame, observations: DG.Column) {
   const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
   console.log(RMSD);
 
-  const errors = await bootstrap(X, y, regression);
-  console.log(errors);
-
-  return pred;
+  const errorsTrue = await bootstrap(X, y, regression, 'AUE', 'shuffle-split', {testRatio: 0.3}, 10);
+  const yPermuted = permuteElements(y);
+  const errorsRandom = await bootstrap(X, yPermuted, regression, 'AUE', 'shuffle-split', {testRatio: 0.3}, 10);
+  return [pred, errorsTrue, errorsRandom];
 }
