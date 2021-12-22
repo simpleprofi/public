@@ -5,6 +5,7 @@ import {AlignedSequenceEncoder} from '@datagrok-libraries/utils/src/sequence-enc
 import {assert, calculateRMSD} from '@datagrok-libraries/utils/src/operations';
 import {Vector} from '@datagrok-libraries/utils/src/type-declarations';
 import {kendallsTau} from '@datagrok-libraries/statistics/src/correlation-coefficient';
+import {bootstrap} from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
 //const coresNumber = os.cpus().length;
@@ -126,15 +127,29 @@ function _insertColumns(targetDf: DG.DataFrame, columns: DG.Column[]): DG.DataFr
   return targetDf;
 }
 
+class RandomForestRegressorEstimator extends RandomForestRegressor {
+  constructor(opts = {}) {
+    super(opts);
+  }
+
+  public fit(X: any, y: any): void {
+    return super.train(X, y);
+  }
+
+  public predict(X: any): any {
+    return super.predict(X);
+  }
+}
+
 async function _buildModel(features: DG.DataFrame, observations: DG.Column) {
   const nSamples = features.rowCount;
 
-  assert(observations.length == nSamples, 'Samples count does not match number of observations.');
+  assert(observations.length == nSamples, 'Samples count do not match number of observations.');
 
-  const nFeatures = features.columns.length;
-  const regression = new RandomForestRegressor({
-    nEstimators: 1000,
-    maxFeatures: Math.round(Math.sqrt(nFeatures)),
+  //const nFeatures = features.columns.length;
+  const regression = new RandomForestRegressorEstimator({
+    nEstimators: 100,
+    maxFeatures: 'auto', //Math.round(Math.sqrt(nFeatures)),
     nJobs: 8, //coresNumber,
   });
 
@@ -144,10 +159,15 @@ async function _buildModel(features: DG.DataFrame, observations: DG.Column) {
   for (let i = 0; i < nSamples; ++i) {
     X[i] = Array.from(features.row(i).cells).map((v: DG.Cell) => v.value);
   }
+
   await regression.init();
   await regression.train(X, y);
   const pred = await regression.predict(X);
   const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
   console.log(RMSD);
+
+  const errors = await bootstrap(X, y, regression);
+  console.log(errors);
+
   return pred;
 }
