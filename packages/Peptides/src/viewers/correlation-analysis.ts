@@ -1,74 +1,145 @@
 import * as DG from 'datagrok-api/dg';
+
 const {RandomForestRegressor} = require('random-forest/async');
 
 import {AlignedSequenceEncoder} from '@datagrok-libraries/utils/src/sequence-encoder';
 import {assert, calculateRMSD} from '@datagrok-libraries/utils/src/operations';
 import {Vector} from '@datagrok-libraries/utils/src/type-declarations';
 import {kendallsTau} from '@datagrok-libraries/statistics/src/correlation-coefficient';
-import {permuteElements, bootstrap} from '@datagrok-libraries/statistics/src/cross-validation';
+import {
+  permuteElements,
+  bootstrap,
+  permutationImportance,
+} from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
 //const coresNumber = os.cpus().length;
 
-export async function correlationAnalysis(
-  tableGrid: DG.Grid,
-  view: DG.TableView,
-  currentDf: DG.DataFrame,
-  sequencesCol: DG.Column,
-  activityColumnName: string,
-  activityScalingMethod: string,
-) {
-  const activityCol = await _scaleColumn(currentDf.getCol(activityColumnName), activityScalingMethod);
-  const encDf = _encodeSequences(sequencesCol);
+export class RegressionAnalysis {
+  protected tableGrid: DG.Grid;
+  protected view: DG.TableView;
+  protected currentDf: DG.DataFrame;
+  protected sequencesCol: DG.Column;
+  protected activityColumnName: string;
+  protected activityScalingMethod: string;
+  protected scaledActivity: DG.Column | undefined;
+  protected encodedDf: DG.DataFrame | undefined;
 
-  _insertColumns(currentDf, [DG.Column.fromList('double', `${activityColumnName}scaled`, activityCol.toList())]);
-  _insertColumns(currentDf, encDf.columns);
+  constructor(
+    tableGrid: DG.Grid,
+    view: DG.TableView,
+    currentDf: DG.DataFrame,
+    sequencesCol: DG.Column,
+    activityColumnName: string,
+    activityScalingMethod: string,
+  ) {
+    this.tableGrid = tableGrid;
+    this.view = view;
+    this.currentDf = currentDf;
+    this.sequencesCol = sequencesCol;
+    this.activityColumnName = activityColumnName;
+    this.activityScalingMethod = activityScalingMethod;
+  }
 
-  const [activityPred, predErrorsTrue, predErrorsRandom] = await _buildModel(encDf, activityCol);
-  const activityPredName = `${activityColumnName}pred`;
+  public async init() {
+    this.scaledActivity = await _scaleColumn(
+      this.currentDf.getCol(this.activityColumnName),
+      this.activityScalingMethod,
+    );
 
-  _insertColumns(currentDf, [DG.Column.fromList('double', activityPredName, activityPred)]);
+    this.encodedDf = _encodeSequences(this.sequencesCol);
 
-  const errorsDf = DG.DataFrame.fromColumns(
-    Array.from([[predErrorsTrue, 'trueAUE'], [predErrorsRandom, 'randomAUE']]).map(
-      (v) => DG.Column.fromFloat32Array(v[1], Float32Array.from(v[0])),
-    ),
-  );
+    _insertColumns(
+      this.currentDf,
+      [DG.Column.fromList('double', `${this.activityColumnName}scaled`, this.scaledActivity.toList())],
+    );
+    _insertColumns(this.currentDf, this.encodedDf.columns);
 
-  view.addViewer(errorsDf.unpivot(errorsDf.columns.names(), errorsDf.columns.names(), 'AUE', 'Value').plot.box({
-    valueColumnName: 'Value',
-    categoryColumnName: 'AUE',
-    statistics: [
-      'min',
-      'max',
-      'avg',
-      'med',
-    ],
-  }));
+    this._addIndividualCorrelationsViewer(this.encodedDf, this.scaledActivity);
+  }
 
-  view.addViewer(DG.VIEWER.SCATTER_PLOT, {
-    xColumnName: activityColumnName,
-    yColumnName: activityPredName,
-    sizeColumnName: activityPredName,
-    colorColumnName: activityColumnName,
-    showRegressionLine: true,
-  });
+  public async assess() {
+    const [
+      activityPred,
+      predErrorsTrue,
+      predErrorsRandom,
+      fimps,
+    ] = await _buildModel(this.encodedDf!, this.scaledActivity!);
+    const activityPredName = `${this.activityColumnName}pred`;
 
-  /*view.addViewer(DG.VIEWER.CORR_PLOT, {
-    xColumnNames: encDf.columns.names(),
-    yColumnNames: [activityColumnName],
-  });*/
+    _insertColumns(this.currentDf, [DG.Column.fromList('double', activityPredName, activityPred)]);
 
-  const corrDf = _measureAssociation(encDf, activityCol);
+    this._addPredictedVsObservedViewer(activityPredName);
+    this._addAccuracyViewer(predErrorsTrue, predErrorsRandom);
+    this._addFeatureImportancesViewer(fimps);
+  }
 
-  view.addViewer(corrDf.plot.bar({
-    splitColumnName: corrDf.columns.names()[0],
-    valueColumnName: corrDf.columns.names()[1],
-    colorColumnName: corrDf.columns.names()[2],
-    valueAggrType: 'sum',
-    barSortType: 'by category',
-    barSortOrder: 'asc',
-  }));
+  protected _addAccuracyViewer(predErrorsTrue: number[], predErrorsRandom: number[]) {
+    const errorsDf = DG.DataFrame.fromColumns(
+      Array.from([[predErrorsTrue, 'trueAUE'], [predErrorsRandom, 'randomAUE']]).map(
+        (v: any[]) => DG.Column.fromFloat32Array(v[1], Float32Array.from(v[0])),
+      ),
+    );
+
+    this.view.addViewer(errorsDf.unpivot(errorsDf.columns.names(), errorsDf.columns.names(), 'AUE', 'Value').plot.box({
+      valueColumnName: 'Value',
+      categoryColumnName: 'AUE',
+      statistics: [
+        'min',
+        'max',
+        'avg',
+        'med',
+      ],
+    }));
+  }
+
+  protected _addFeatureImportancesViewer(fimps: number[][]) {
+    const fimpsDf = DG.DataFrame.fromColumns(
+      Array.from(fimps).map(
+        (v: number[], i: number) => DG.Column.fromFloat32Array(`${i + 1}`, Float32Array.from(v)),
+      ),
+    );
+
+    this.view.addViewer(
+      fimpsDf.unpivot(
+        fimpsDf.columns.names(),
+        fimpsDf.columns.names(),
+        'Position',
+        'Importance',
+      ).plot.box({
+        valueColumnName: 'Importance',
+        categoryColumnName: 'Position',
+        statistics: [
+          'min',
+          'max',
+          'avg',
+          'med',
+        ],
+      }));
+  }
+
+  protected _addIndividualCorrelationsViewer(encDf: DG.DataFrame, activityCol: DG.Column) {
+    const corrDf = _measureAssociation(encDf, activityCol);
+
+    this.view.addViewer(corrDf.plot.bar({
+      splitColumnName: corrDf.columns.names()[0],
+      valueColumnName: corrDf.columns.names()[1],
+      colorColumnName: corrDf.columns.names()[2],
+      valueAggrType: 'sum',
+      barSortType: 'by category',
+      barSortOrder: 'asc',
+    }));
+  }
+
+  protected _addPredictedVsObservedViewer(activityPredName: string) {
+    this.view.addViewer(DG.VIEWER.SCATTER_PLOT, {
+      xColumnName: this.activityColumnName,
+      yColumnName: activityPredName,
+      sizeColumnName: activityPredName,
+      colorColumnName: this.activityColumnName,
+      showRegressionLine: true,
+    });
+  }
 }
 
 function _measureAssociation(data: DG.DataFrame, target: DG.Column): DG.DataFrame {
@@ -185,8 +256,12 @@ async function _buildModel(features: DG.DataFrame, observations: DG.Column) {
   const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
   console.log(RMSD);
 
+  const [fimps, fimpsRaw] = await permutationImportance(X, y, regression);
+  console.log(fimps);
+  console.log(fimpsRaw);
+
   const errorsTrue = await bootstrap(X, y, regression, 'AUE', 'shuffle-split', {testRatio: 0.3}, 10);
   const yPermuted = permuteElements(y);
   const errorsRandom = await bootstrap(X, yPermuted, regression, 'AUE', 'shuffle-split', {testRatio: 0.3}, 10);
-  return [pred, errorsTrue, errorsRandom];
+  return [pred, errorsTrue, errorsRandom, fimpsRaw];
 }

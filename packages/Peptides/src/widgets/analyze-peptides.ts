@@ -2,7 +2,7 @@ import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 import {Peptides} from '../peptides';
-import {correlationAnalysis} from '../viewers/correlation-analysis';
+import {RegressionAnalysis} from '../viewers/correlation-analysis';
 
 /**
  * Peptide analysis widget.
@@ -92,11 +92,10 @@ export async function analyzePeptidesWidget(
     }
   });
 
-  const startCABtn = ui.button('Launch CA', async () => {
+  const startCABtn = ui.button('Launch RA', async () => {
     if (activityColumnChoice.value.type === DG.TYPE.FLOAT) {
-      const progress = DG.TaskBarProgressIndicator.create('Loading correlation analysis...');
-
-      await correlationAnalysis(
+      const progress = DG.TaskBarProgressIndicator.create('Initializing regression analysis...');
+      const ra = new RegressionAnalysis(
         tableGrid,
         view,
         currentDf,
@@ -104,8 +103,12 @@ export async function analyzePeptidesWidget(
         activityColumnChoice.value.name,
         activityScalingMethod.value,
       );
-
+      await ra.init();
       progress.close();
+
+      const progress2 = DG.TaskBarProgressIndicator.create('Loading model assessment...');
+      await ra.assess();
+      progress2.close();
     } else {
       grok.shell.error('The activity column must be of floating point number type!');
     }

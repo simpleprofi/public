@@ -54,10 +54,12 @@ export async function permutationImportance(
   estimator: Estimator,
   measure: KnownMeasures | Measure = 'AUE',
   nRepeats: number = 5,
-): Promise<number[]> {
-  const nItems = X.length;
+): Promise<[number[], number[][]]> {
+  const nItems = X[0].length;
   const scores = new Array(nItems).fill(0);
+  const scoresRaw = new Array(nItems).fill(0).map(() => new Array(nRepeats).fill(0));
   const m = typeof measure === 'function' ? measure : MeasuresMap[measure];
+  const _sum = (a: number, b: number) => a + b;
 
   const _measure = async () => {
     await estimator.fit(X, y);
@@ -65,20 +67,30 @@ export async function permutationImportance(
     return m(y, yPred);
   };
 
-  const refScore = await _measure();
+  const refScores = new Array(nRepeats).fill(0);
 
-  for (let j = 0; j < nItems; ++j) {
-    const tmpF = Object.assign([], X[j]);
+  for (let j = 0; j < nRepeats; ++j) {
+    refScores[j] = await _measure();
+  }
+
+  const refScore = refScores.reduce(_sum, 0) / nRepeats;
+
+  console.log([refScores, refScore]);
+
+  for (let i = 0; i < nItems; ++i) {
+    const selF = _takeColumn(X, i);
     const decreases = new Array(nRepeats).fill(-refScore);
 
-    for (let i = 0; i < nRepeats; ++i) {
-      X[j] = permuteElements(X[j]);
-      decreases[i] += await _measure();
+    for (let j = 0; j < nRepeats; ++j) {
+      _setColumn(X, i, permuteElements(selF));
+      decreases[j] += await _measure();
+      scoresRaw[i][j] = decreases[j];
     }
-    X[j] = tmpF;
-    scores[j] = decreases.reduce((a, b) => a + b, 0) / nRepeats;
+    _setColumn(X, i, selF);
+    scores[i] = decreases.reduce(_sum, 0) / nRepeats;
+    console.log([i, decreases, scores[i]]);
   }
-  return scores;
+  return [scores, scoresRaw];
 }
 
 /**
@@ -94,10 +106,19 @@ export function permuteElements(items: any[]): any[] {
   return _apply(items, index);
 }
 
+function _takeColumn(X: number[][], index: number): number[] {
+  return Array.from(X).map((v) => v[index]);
+}
+
+function _setColumn(X: number[][], index: number, value: number[]) {
+  for (let i = 0; i < X.length; ++i) {
+    X[i][index] = value[i];
+  }
+}
+
 /**
  * Splits samples into training and test sets.
  *
- * @export
  * @class ShuffleSplit
  * @example const cv = new ShuffleSplit(0.3);
  * cv.split([1, 2, 3], [4, 5, 6]); // [[[2, 1], [3]], [[5, 4], [6]]]
