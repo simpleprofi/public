@@ -34,6 +34,67 @@ export async function bootstrap(
 }
 
 /**
+ * Calculates permutation importance for feature evaluation.
+ *
+ * The permutation importance is defined to be the difference
+ * between the baseline metric and metric from permutating
+ * the feature column.
+ *
+ * @export
+ * @param {any[]} X The data set used to train the estimator.
+ * @param {any[]} y Targets.
+ * @param {Estimator} estimator An estimator that is compatible with measure.
+ * @param {(KnownMeasures | Measure)} [measure='AUE'] Measure to use.
+ * @param {number} [nRepeats=5] Number of times to permute a feature.
+ * @return {Promise<number[]>} Mean of feature importance over nRepeats.
+ */
+export async function permutationImportance(
+  X: any[][],
+  y: any[],
+  estimator: Estimator,
+  measure: KnownMeasures | Measure = 'AUE',
+  nRepeats: number = 5,
+): Promise<number[]> {
+  const nItems = X.length;
+  const scores = new Array(nItems).fill(0);
+  const m = typeof measure === 'function' ? measure : MeasuresMap[measure];
+
+  const _measure = async () => {
+    await estimator.fit(X, y);
+    const yPred = await estimator.predict(X);
+    return m(y, yPred);
+  };
+
+  const refScore = await _measure();
+
+  for (let j = 0; j < nItems; ++j) {
+    const tmpF = Object.assign([], X[j]);
+    const decreases = new Array(nRepeats).fill(-refScore);
+
+    for (let i = 0; i < nRepeats; ++i) {
+      X[j] = permuteElements(X[j]);
+      decreases[i] += await _measure();
+    }
+    X[j] = tmpF;
+    scores[j] = decreases.reduce((a, b) => a + b, 0) / nRepeats;
+  }
+  return scores;
+}
+
+/**
+ * Permutes elements of an array.
+ *
+ * @export
+ * @param {any[]} items The array.
+ * @return {any[]} Permuted array.
+ */
+export function permuteElements(items: any[]): any[] {
+  const nItems = items.length;
+  const index = _genPermutation(nItems);
+  return _apply(items, index);
+}
+
+/**
  * Splits samples into training and test sets.
  *
  * @export
@@ -91,6 +152,26 @@ function _std(array: number[]): number {
 }
 
 /**
+   * Generates a permutation of indices ranging from 0 to n-1.
+   *
+   * @protected
+   * @param {number} n Length of the permuted index.
+   * @return {number[]} The permutation.
+   */
+function _genPermutation(n: number): number[] {
+  const index = new Array(n).fill(0).map((_, i: number) => i);
+
+  for (let i = 0; i < n; ++i) {
+    const pos = n - i - 1;
+    const spos = Math.round(Math.random() * pos);
+    const tmp = index[spos];
+    index[spos] = index[pos];
+    index[pos] = tmp;
+  }
+  return index;
+}
+
+/**
  * Rearranges elements of an array according with an index provided.
  *
  * @param {any[]} items The array.
@@ -140,35 +221,3 @@ function _AUE(a: number[], b: number[]): number {
   return sum / b.length;
 }
 
-/**
-   * Generates a permutation of indices ranging from 0 to n-1.
-   *
-   * @protected
-   * @param {number} n Length of the permuted index.
-   * @return {number[]} The permutation.
-   */
-function _genPermutation(n: number): number[] {
-  const index = new Array(n).fill(0).map((_, i: number) => i);
-
-  for (let i = 0; i < n; ++i) {
-    const pos = n - i - 1;
-    const spos = Math.round(Math.random() * pos);
-    const tmp = index[spos];
-    index[spos] = index[pos];
-    index[pos] = tmp;
-  }
-  return index;
-}
-
-/**
- * Permutes elements of an array.
- *
- * @export
- * @param {any[]} items The array.
- * @return {any[]} Permuted array.
- */
-export function permuteElements(items: any[]): any[] {
-  const nItems = items.length;
-  const index = _genPermutation(nItems);
-  return _apply(items, index);
-}
