@@ -1,5 +1,17 @@
+/**
+ * Declares an estimator which must have both fit and predict methods.
+ *
+ * @export
+ * @interface Estimator
+ */
+export interface Estimator {
+  fit(X: any[][], y: any[]): void;
+  predict(X: any[][]): any[];
+}
+
 export interface Progress {
-  update?: ((percent: number, description: string) => void);
+  update: (percent: number, description: string) => void;
+  set description(s: string);
 }
 
 type BootstrapOptions = {
@@ -7,13 +19,13 @@ type BootstrapOptions = {
   splitter?: KnownSplitters,
   splitterArgs?: Object,
   nRepeats?: number,
-  progress?: Progress,
+  progress?: Progress | undefined,
 };
 
 type ImportanceOptions = {
   measure?: KnownMeasures | Measure,
   nRepeats?: number,
-  progress?: Progress,
+  progress?: Progress | undefined,
 };
 
 /**
@@ -43,7 +55,7 @@ export async function bootstrap(
     splitter = 'shuffle-split',
     splitterArgs = {},
     nRepeats = 100,
-    progress = {},
+    progress = undefined,
   } = options;
   const cv = new SplitterMap[splitter](...Object.values(splitterArgs));
   const scores = new Array(nRepeats).fill(0);
@@ -51,7 +63,8 @@ export async function bootstrap(
 
   const progressDescription = 'Bootstrapping...';
 
-  if (progress.update) {
+  if (progress) {
+    progress.description = progressDescription;
     progress.update(0, progressDescription);
   }
 
@@ -61,7 +74,7 @@ export async function bootstrap(
     const yPred = await estimator.predict(XTest);
     scores[i] = m(yTest, yPred);
 
-    if (progress.update) {
+    if (progress) {
       progress.update(i * 100 / nRepeats, progressDescription);
     }
   }
@@ -111,7 +124,7 @@ export async function permutationImportance(
   const {
     measure = 'AUE',
     nRepeats = 5,
-    progress = {},
+    progress = undefined,
   } = options;
 
   const nItems = X[0].length;
@@ -133,12 +146,10 @@ export async function permutationImportance(
   }
 
   const refScore = refScores.reduce(_sum, 0) / nRepeats;
+  const progressDescription = 'Calculating feature importances...';
 
-  console.log([refScores, refScore]);
-
-  const progressDescription = 'Calculating feature importance...';
-
-  if (progress.update) {
+  if (progress) {
+    progress.description = progressDescription;
     progress.update(0, progressDescription);
   }
 
@@ -151,13 +162,12 @@ export async function permutationImportance(
       decreases[j] += await _measure();
       scoresRaw[i][j] = decreases[j];
 
-      if (progress.update) {
-        progress.update(i * j * 100 / nRepeats / nItems, progressDescription);
+      if (progress) {
+        progress.update((i * nRepeats + j) * 100 / nRepeats / nItems, progressDescription);
       }
     }
     _setColumn(X, i, selF);
     scores[i] = decreases.reduce(_sum, 0) / nRepeats;
-    console.log([i, decreases, scores[i]]);
   }
   return [scores, scoresRaw];
 }
@@ -270,16 +280,6 @@ function _genPermutation(n: number): number[] {
  */
 function _apply(items: any[], index: number[]): any[] {
   return items.map((_, i) => items[index[i]]);
-}
-
-/**
- * Declares an estimator which must have both fit and predict methods.
- *
- * @interface Estimator
- */
-interface Estimator {
-  fit(X: any[][], y: any[]): void;
-  predict(X: any[][]): any[];
 }
 
 const SplitterMap = {

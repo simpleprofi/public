@@ -107,12 +107,8 @@ export async function analyzePeptidesWidget(
         activityScalingMethod.value,
         progress,
       );
-      progress.update(0, 'Loading model...');
       await ra.init();
-      progress.update(100, 'Loading model...');
-      progress.update(0, 'Assessing model...');
       await ra.assess();
-      progress.update(100, 'Assessing model...');
       progress.close();
     } else {
       grok.shell.error('The activity column must be of floating point number type!');

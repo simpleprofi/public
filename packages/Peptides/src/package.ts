@@ -183,6 +183,19 @@ export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
   return await widget.draw();
 }
 
+//#region Top menu
+
+//top-menu: Peptides | Peptide Space...
+//name: Peptide Space
+//input: dataframe table
+//input: column col {semType: alignedSequence}
+//output: viewer result
+export async function chemSpaceTopMenu(table: DG.DataFrame, col: DG.Column) {
+  await (table.columns as DG.ColumnList).addNewCalculated(`New ${col.name}`, `${col.name}`);
+}
+
+//#endregion
+
 //name: Spiral Plot
 ////input: dataframe table
 ////input: column activity
