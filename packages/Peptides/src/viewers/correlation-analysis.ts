@@ -121,8 +121,7 @@ export class RegressionAnalysis {
     y: number[],
     regression: Estimator,
   ): Promise<[number[], number[], number[][]]> {
-    const [fimps, fimpsRaw] = await permutationImportance(X, y, regression, {progress: this.progress});
-    console.log(fimps);
+    const fimpsRaw = await permutationImportance(X, y, regression, {progress: this.progress});
     console.log(fimpsRaw);
 
     const errorsTrue = await bootstrap(X, y, regression, {nRepeats: 10, progress: this.progress});

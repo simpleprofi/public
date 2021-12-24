@@ -120,7 +120,7 @@ export async function permutationImportance(
   y: any[],
   estimator: Estimator,
   options: ImportanceOptions = {},
-): Promise<[number[], number[][]]> {
+): Promise<number[][]> {
   const {
     measure = 'AUE',
     nRepeats = 5,
@@ -128,13 +128,13 @@ export async function permutationImportance(
   } = options;
 
   const nItems = X[0].length;
-  const scores = new Array(nItems).fill(0);
+  //const scores = new Array(nItems).fill(0);
   const scoresRaw = new Array(nItems).fill(0).map(() => new Array(nRepeats).fill(0));
   const m = typeof measure === 'function' ? measure : MeasuresMap[measure];
   const _sum = (a: number, b: number) => a + b;
 
   const _measure = async () => {
-    await estimator.fit(X, y);
+    //await estimator.fit(X, y);
     const yPred = await estimator.predict(X);
     return m(y, yPred);
   };
@@ -167,9 +167,9 @@ export async function permutationImportance(
       }
     }
     _setColumn(X, i, selF);
-    scores[i] = decreases.reduce(_sum, 0) / nRepeats;
+    //scores[i] = decreases.reduce(_sum, 0) / nRepeats;
   }
-  return [scores, scoresRaw];
+  return scoresRaw;
 }
 
 /**
