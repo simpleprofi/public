@@ -1,3 +1,21 @@
+export interface Progress {
+  update?: ((percent: number, description: string) => void);
+}
+
+type BootstrapOptions = {
+  measure?: KnownMeasures | Measure,
+  splitter?: KnownSplitters,
+  splitterArgs?: Object,
+  nRepeats?: number,
+  progress?: Progress,
+};
+
+type ImportanceOptions = {
+  measure?: KnownMeasures | Measure,
+  nRepeats?: number,
+  progress?: Progress,
+};
+
 /**
  * Cross-validates an estimator with an error measure.
  *
@@ -5,30 +23,47 @@
  * @param {any[]} X Input samples of features.
  * @param {any[]} y Target variable.
  * @param {Estimator} estimator The estimator to explore.
- * @param {(KnownMeasures | Measure)} [measure='AUE'] The measure chosen.
- * @param {KnownSplitters} [splitter='shuffle-split'] A splitter to apply.
- * @param {Object} [splitterArgs={}] Splitter optional arguments.
- * @param {number} [nRepeats=100] Number of cycles to run.
- * @return {number[]} Errors measured during the run.
+ * @param {BootstrapOptions} [options={
+ *     measure: 'AUE',            // The measure chosen.
+ *     splitter: 'shuffle-split', // A splitter to apply.
+ *     splitterArgs: {},          // Splitter optional arguments.
+ *     nRepeats: 100,             // Number of cycles to run.
+ *     progress: {},              // Optional progress indicator.
+ *   }] Bootstrap procedure controlling options.
+ * @return {Promise<number[]>} Errors measured during the run.
  */
 export async function bootstrap(
   X: any[][],
   y: any[],
   estimator: Estimator,
-  measure: KnownMeasures | Measure = 'AUE',
-  splitter: KnownSplitters = 'shuffle-split',
-  splitterArgs: Object = {},
-  nRepeats: number = 100,
+  options: BootstrapOptions = {},
 ): Promise<number[]> {
+  const {
+    measure = 'AUE',
+    splitter = 'shuffle-split',
+    splitterArgs = {},
+    nRepeats = 100,
+    progress = {},
+  } = options;
   const cv = new SplitterMap[splitter](...Object.values(splitterArgs));
   const scores = new Array(nRepeats).fill(0);
   const m = typeof measure === 'function' ? measure : MeasuresMap[measure];
+
+  const progressDescription = 'Bootstrapping...';
+
+  if (progress.update) {
+    progress.update(0, progressDescription);
+  }
 
   for (let i = 0; i < nRepeats; ++i) {
     const [[XTrain, XTest], [yTrain, yTest]] = cv.split(X, y);
     await estimator.fit(XTrain, yTrain);
     const yPred = await estimator.predict(XTest);
     scores[i] = m(yTest, yPred);
+
+    if (progress.update) {
+      progress.update(i * 100 / nRepeats, progressDescription);
+    }
   }
   return scores;
 }
@@ -48,13 +83,37 @@ export async function bootstrap(
  * @param {number} [nRepeats=5] Number of times to permute a feature.
  * @return {Promise<number[]>} Mean of feature importance over nRepeats.
  */
+
+/**
+ * Calculates permutation importance for feature evaluation.
+ *
+ * The permutation importance is defined to be the difference
+ * between the baseline metric and metric from permutating
+ * the feature column.
+ *
+ * @export
+ * @param {any[]} X The data set used to train the estimator.
+ * @param {any[]} y Targets.
+ * @param {Estimator} estimator An estimator that is compatible with measure.
+ * @param {ImportanceOptions} [options={
+ *     measure: 'AUE', // The measure chosen.
+ *     nRepeats: 5,    // Number of cycles to run.
+ *     progress: {},   // Optional progress indicator.
+ * }]
+ * @return {*}  {Promise<[number[], number[][]]>}
+ */
 export async function permutationImportance(
   X: any[][],
   y: any[],
   estimator: Estimator,
-  measure: KnownMeasures | Measure = 'AUE',
-  nRepeats: number = 5,
+  options: ImportanceOptions = {},
 ): Promise<[number[], number[][]]> {
+  const {
+    measure = 'AUE',
+    nRepeats = 5,
+    progress = {},
+  } = options;
+
   const nItems = X[0].length;
   const scores = new Array(nItems).fill(0);
   const scoresRaw = new Array(nItems).fill(0).map(() => new Array(nRepeats).fill(0));
@@ -77,6 +136,12 @@ export async function permutationImportance(
 
   console.log([refScores, refScore]);
 
+  const progressDescription = 'Calculating feature importance...';
+
+  if (progress.update) {
+    progress.update(0, progressDescription);
+  }
+
   for (let i = 0; i < nItems; ++i) {
     const selF = _takeColumn(X, i);
     const decreases = new Array(nRepeats).fill(-refScore);
@@ -85,6 +150,10 @@ export async function permutationImportance(
       _setColumn(X, i, permuteElements(selF));
       decreases[j] += await _measure();
       scoresRaw[i][j] = decreases[j];
+
+      if (progress.update) {
+        progress.update(i * j * 100 / nRepeats / nItems, progressDescription);
+      }
     }
     _setColumn(X, i, selF);
     scores[i] = decreases.reduce(_sum, 0) / nRepeats;

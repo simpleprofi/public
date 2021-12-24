@@ -102,13 +102,15 @@ export async function analyzePeptidesWidget(
         col,
         activityColumnChoice.value.name,
         activityScalingMethod.value,
+        progress,
       );
+      progress.update(0, 'Loading model...');
       await ra.init();
-      progress.close();
-
-      const progress2 = DG.TaskBarProgressIndicator.create('Loading model assessment...');
+      progress.update(100, 'Loading model...');
+      progress.update(0, 'Assessing model...');
       await ra.assess();
-      progress2.close();
+      progress.update(100, 'Assessing model...');
+      progress.close();
     } else {
       grok.shell.error('The activity column must be of floating point number type!');
     }

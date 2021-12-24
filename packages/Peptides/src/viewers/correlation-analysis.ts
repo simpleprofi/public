@@ -10,6 +10,7 @@ import {
   permuteElements,
   bootstrap,
   permutationImportance,
+  Progress,
 } from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
@@ -24,6 +25,7 @@ export class RegressionAnalysis {
   protected activityScalingMethod: string;
   protected scaledActivity: DG.Column | undefined;
   protected encodedDf: DG.DataFrame | undefined;
+  protected progress: Progress;
 
   constructor(
     tableGrid: DG.Grid,
@@ -32,6 +34,7 @@ export class RegressionAnalysis {
     sequencesCol: DG.Column,
     activityColumnName: string,
     activityScalingMethod: string,
+    progress: Progress,
   ) {
     this.tableGrid = tableGrid;
     this.view = view;
@@ -39,6 +42,7 @@ export class RegressionAnalysis {
     this.sequencesCol = sequencesCol;
     this.activityColumnName = activityColumnName;
     this.activityScalingMethod = activityScalingMethod;
+    this.progress = progress;
   }
 
   public async init() {
@@ -64,7 +68,7 @@ export class RegressionAnalysis {
       predErrorsTrue,
       predErrorsRandom,
       fimps,
-    ] = await _buildModel(this.encodedDf!, this.scaledActivity!);
+    ] = await this._buildModel();
     const activityPredName = `${this.activityColumnName}pred`;
 
     _insertColumns(this.currentDf, [DG.Column.fromList('double', activityPredName, activityPred)]);
@@ -139,6 +143,41 @@ export class RegressionAnalysis {
       colorColumnName: this.activityColumnName,
       showRegressionLine: true,
     });
+  }
+
+  protected async _buildModel() {
+    const nSamples = this.encodedDf!.rowCount;
+
+    assert(this.scaledActivity!.length == nSamples, 'Samples count do not match number of observations.');
+
+    //const nFeatures = features.columns.length;
+    const regression = new RandomForestRegressorEstimator({
+      nEstimators: 100,
+      maxFeatures: 'auto', //Math.round(Math.sqrt(nFeatures)),
+      nJobs: 8, //coresNumber,
+    });
+
+    const X = new Array(nSamples);
+    const y = Array.from(this.scaledActivity!.getRawData());
+
+    for (let i = 0; i < nSamples; ++i) {
+      X[i] = Array.from(this.encodedDf!.row(i).cells).map((v: DG.Cell) => v.value);
+    }
+
+    await regression.init();
+    await regression.train(X, y);
+    const pred = await regression.predict(X);
+    const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
+    console.log(RMSD);
+
+    const [fimps, fimpsRaw] = await permutationImportance(X, y, regression);
+    console.log(fimps);
+    console.log(fimpsRaw);
+
+    const errorsTrue = await bootstrap(X, y, regression, {nRepeats: 10, progress: this.progress});
+    const yPermuted = permuteElements(y);
+    const errorsRandom = await bootstrap(X, yPermuted, regression, {nRepeats: 10, progress: this.progress});
+    return [pred, errorsTrue, errorsRandom, fimpsRaw];
   }
 }
 
@@ -231,37 +270,3 @@ class RandomForestRegressorEstimator extends RandomForestRegressor {
   }
 }
 
-async function _buildModel(features: DG.DataFrame, observations: DG.Column) {
-  const nSamples = features.rowCount;
-
-  assert(observations.length == nSamples, 'Samples count do not match number of observations.');
-
-  //const nFeatures = features.columns.length;
-  const regression = new RandomForestRegressorEstimator({
-    nEstimators: 100,
-    maxFeatures: 'auto', //Math.round(Math.sqrt(nFeatures)),
-    nJobs: 8, //coresNumber,
-  });
-
-  const X = new Array(nSamples);
-  const y = Array.from(observations.getRawData());
-
-  for (let i = 0; i < nSamples; ++i) {
-    X[i] = Array.from(features.row(i).cells).map((v: DG.Cell) => v.value);
-  }
-
-  await regression.init();
-  await regression.train(X, y);
-  const pred = await regression.predict(X);
-  const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
-  console.log(RMSD);
-
-  const [fimps, fimpsRaw] = await permutationImportance(X, y, regression);
-  console.log(fimps);
-  console.log(fimpsRaw);
-
-  const errorsTrue = await bootstrap(X, y, regression, 'AUE', 'shuffle-split', {testRatio: 0.3}, 10);
-  const yPermuted = permuteElements(y);
-  const errorsRandom = await bootstrap(X, yPermuted, regression, 'AUE', 'shuffle-split', {testRatio: 0.3}, 10);
-  return [pred, errorsTrue, errorsRandom, fimpsRaw];
-}
