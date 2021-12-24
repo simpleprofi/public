@@ -11,6 +11,7 @@ import {
   bootstrap,
   permutationImportance,
   Progress,
+  Estimator,
 } from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
@@ -23,9 +24,10 @@ export class RegressionAnalysis {
   protected sequencesCol: DG.Column;
   protected activityColumnName: string;
   protected activityScalingMethod: string;
+  protected progress: Progress;
   protected scaledActivity: DG.Column | undefined;
   protected encodedDf: DG.DataFrame | undefined;
-  protected progress: Progress;
+  protected model: [number[][], number[], Estimator] | undefined;
 
   constructor(
     tableGrid: DG.Grid,
@@ -60,22 +62,73 @@ export class RegressionAnalysis {
     _insertColumns(this.currentDf, this.encodedDf.columns);
 
     this._addIndividualCorrelationsViewer(this.encodedDf, this.scaledActivity);
-  }
 
-  public async assess() {
     const [
       activityPred,
-      predErrorsTrue,
-      predErrorsRandom,
-      fimps,
+      X,
+      y,
+      estimator,
     ] = await this._buildModel();
+    this.model = [X, y, estimator];
+
     const activityPredName = `${this.activityColumnName}pred`;
 
     _insertColumns(this.currentDf, [DG.Column.fromList('double', activityPredName, activityPred)]);
 
     this._addPredictedVsObservedViewer(activityPredName);
+  }
+
+  public async assess() {
+    const [X, y, regression] = this.model!;
+    const [
+      predErrorsTrue,
+      predErrorsRandom,
+      fimps,
+    ] = await this._assessModel(X, y, regression);
     this._addAccuracyViewer(predErrorsTrue, predErrorsRandom);
     this._addFeatureImportancesViewer(fimps);
+  }
+
+  protected async _buildModel() {
+    const nSamples = this.encodedDf!.rowCount;
+
+    assert(this.scaledActivity!.length == nSamples, 'Samples count do not match number of observations.');
+
+    //const nFeatures = features.columns.length;
+    const regression = new RandomForestRegressorEstimator({
+      nEstimators: 100,
+      maxFeatures: 'auto', //Math.round(Math.sqrt(nFeatures)),
+      nJobs: 8, //coresNumber,
+    });
+
+    const X = new Array(nSamples);
+    const y = Array.from(this.scaledActivity!.getRawData());
+
+    for (let i = 0; i < nSamples; ++i) {
+      X[i] = Array.from(this.encodedDf!.row(i).cells).map((v: DG.Cell) => v.value);
+    }
+
+    await regression.init();
+    await regression.train(X, y);
+    const pred = await regression.predict(X);
+    const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
+    console.log(RMSD);
+    return [pred, X, y, regression];
+  }
+
+  protected async _assessModel(
+    X: number[][],
+    y: number[],
+    regression: Estimator,
+  ): Promise<[number[], number[], number[][]]> {
+    const [fimps, fimpsRaw] = await permutationImportance(X, y, regression, {progress: this.progress});
+    console.log(fimps);
+    console.log(fimpsRaw);
+
+    const errorsTrue = await bootstrap(X, y, regression, {nRepeats: 10, progress: this.progress});
+    const yPermuted = permuteElements(y);
+    const errorsRandom = await bootstrap(X, yPermuted, regression, {nRepeats: 10, progress: this.progress});
+    return [errorsTrue, errorsRandom, fimpsRaw];
   }
 
   protected _addAccuracyViewer(predErrorsTrue: number[], predErrorsRandom: number[]) {
@@ -88,6 +141,7 @@ export class RegressionAnalysis {
     this.view.addViewer(errorsDf.unpivot(errorsDf.columns.names(), errorsDf.columns.names(), 'AUE', 'Value').plot.box({
       valueColumnName: 'Value',
       categoryColumnName: 'AUE',
+      binColorColumnName: 'Value',
       statistics: [
         'min',
         'max',
@@ -100,7 +154,7 @@ export class RegressionAnalysis {
   protected _addFeatureImportancesViewer(fimps: number[][]) {
     const fimpsDf = DG.DataFrame.fromColumns(
       Array.from(fimps).map(
-        (v: number[], i: number) => DG.Column.fromFloat32Array(`${i + 1}`, Float32Array.from(v)),
+        (v: number[], i: number) => DG.Column.fromFloat32Array(`${i + 1}`.padStart(2, '0'), Float32Array.from(v)),
       ),
     );
 
@@ -113,6 +167,7 @@ export class RegressionAnalysis {
       ).plot.box({
         valueColumnName: 'Importance',
         categoryColumnName: 'Position',
+        binColorColumnName: 'Importance',
         statistics: [
           'min',
           'max',
@@ -143,41 +198,6 @@ export class RegressionAnalysis {
       colorColumnName: this.activityColumnName,
       showRegressionLine: true,
     });
-  }
-
-  protected async _buildModel() {
-    const nSamples = this.encodedDf!.rowCount;
-
-    assert(this.scaledActivity!.length == nSamples, 'Samples count do not match number of observations.');
-
-    //const nFeatures = features.columns.length;
-    const regression = new RandomForestRegressorEstimator({
-      nEstimators: 100,
-      maxFeatures: 'auto', //Math.round(Math.sqrt(nFeatures)),
-      nJobs: 8, //coresNumber,
-    });
-
-    const X = new Array(nSamples);
-    const y = Array.from(this.scaledActivity!.getRawData());
-
-    for (let i = 0; i < nSamples; ++i) {
-      X[i] = Array.from(this.encodedDf!.row(i).cells).map((v: DG.Cell) => v.value);
-    }
-
-    await regression.init();
-    await regression.train(X, y);
-    const pred = await regression.predict(X);
-    const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
-    console.log(RMSD);
-
-    const [fimps, fimpsRaw] = await permutationImportance(X, y, regression);
-    console.log(fimps);
-    console.log(fimpsRaw);
-
-    const errorsTrue = await bootstrap(X, y, regression, {nRepeats: 10, progress: this.progress});
-    const yPermuted = permuteElements(y);
-    const errorsRandom = await bootstrap(X, yPermuted, regression, {nRepeats: 10, progress: this.progress});
-    return [pred, errorsTrue, errorsRandom, fimpsRaw];
   }
 }
 
@@ -249,8 +269,19 @@ function _encodeSequences(sequencesCol: DG.Column): DG.DataFrame {
   return df;
 }
 
-function _insertColumns(targetDf: DG.DataFrame, columns: DG.Column[]): DG.DataFrame {
+function _insertColumns(
+  targetDf: DG.DataFrame,
+  columns: DG.Column[],
+  existPolicy: 'replace' | 'skip' = 'skip',
+): DG.DataFrame {
   for (const col of columns) {
+    if (targetDf.col(col.name)) {
+      if (existPolicy == 'replace') {
+        targetDf.columns.remove(col.name);
+      } else {
+        continue;
+      }
+    }
     targetDf.columns.add(col);
   }
   return targetDf;
