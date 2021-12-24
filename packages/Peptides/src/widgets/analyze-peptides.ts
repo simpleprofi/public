@@ -3,6 +3,7 @@ import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 import {Peptides} from '../peptides';
 import {RegressionAnalysis} from '../viewers/correlation-analysis';
+import '../styles.css';
 
 /**
  * Peptide analysis widget.
@@ -22,7 +23,7 @@ export async function analyzePeptidesWidget(
     tempCol = column.type === DG.TYPE.FLOAT ? column : null;
   }
   const defaultColumn: DG.Column = currentDf.col('activity') || currentDf.col('IC50') || tempCol;
-  const histogramHost = ui.div([]);
+  const histogramHost = ui.div([], {id: 'pep-hist-host'});
 
   let hist: DG.Viewer;
 
@@ -52,6 +53,7 @@ export async function analyzePeptidesWidget(
         showXAxis: true,
         showColumnSelector: false,
         showRangeSlider: false,
+        showBinSelector: false,
       // bins: b,
       });
       histogramHost.lastChild?.remove();
@@ -79,8 +81,8 @@ export async function analyzePeptidesWidget(
     if (activityColumnChoice.value.type === DG.TYPE.FLOAT) {
       const progress = DG.TaskBarProgressIndicator.create('Loading SAR...');
       const options: {[key: string]: string} = {
-        'activityColumnColumnName': activityColumnChoice.value.name,
-        'activityScalingMethod': activityScalingMethod.value,
+        'activityColumnName': activityColumnChoice.value.name,
+        'scaling': activityScalingMethod.value,
       };
 
       const peptides = new Peptides();
@@ -91,6 +93,7 @@ export async function analyzePeptidesWidget(
       grok.shell.error('The activity column must be of floating point number type!');
     }
   });
+  startBtn.style.alignSelf = 'center';
 
   const startCABtn = ui.button('Launch RA', async () => {
     if (activityColumnChoice.value.type === DG.TYPE.FLOAT) {
@@ -129,10 +132,11 @@ export async function analyzePeptidesWidget(
   return new DG.Widget(
     ui.divV([
       viewer.root,
-      ui.inputs([activityColumnChoice, activityScalingMethod]),
-      startBtn,
-      startCABtn,
-      histogramHost,
+      ui.splitH([
+        ui.splitV([ui.inputs([activityColumnChoice, activityScalingMethod]), startBtn, startCABtn]),
+        histogramHost,
+      ], {style: {height: 'unset'}}),
+      // histogramHost,
     ]),
   );
 }
