@@ -61,11 +61,8 @@ export async function bootstrap(
   const scores = new Array(nRepeats).fill(0);
   const m = typeof measure === 'function' ? measure : MeasuresMap[measure];
 
-  const progressDescription = 'Bootstrapping...';
-
   if (progress) {
-    progress.description = progressDescription;
-    progress.update(0, progressDescription);
+    progress.update(0, '');
   }
 
   for (let i = 0; i < nRepeats; ++i) {
@@ -75,7 +72,7 @@ export async function bootstrap(
     scores[i] = m(yTest, yPred);
 
     if (progress) {
-      progress.update(i * 100 / nRepeats, progressDescription);
+      progress.update(i * 100 / nRepeats, '');
     }
   }
   return scores;
@@ -146,11 +143,9 @@ export async function permutationImportance(
   }
 
   const refScore = refScores.reduce(_sum, 0) / nRepeats;
-  const progressDescription = 'Calculating feature importances...';
 
   if (progress) {
-    progress.description = progressDescription;
-    progress.update(0, progressDescription);
+    progress.update(0, '');
   }
 
   for (let i = 0; i < nItems; ++i) {
@@ -163,7 +158,7 @@ export async function permutationImportance(
       scoresRaw[i][j] = decreases[j];
 
       if (progress) {
-        progress.update((i * nRepeats + j) * 100 / nRepeats / nItems, progressDescription);
+        progress.update((i * nRepeats + j) * 100 / nRepeats / nItems, '');
       }
     }
     _setColumn(X, i, selF);

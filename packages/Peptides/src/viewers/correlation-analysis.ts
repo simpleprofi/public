@@ -80,13 +80,15 @@ export class RegressionAnalysis {
 
   public async assess() {
     const [X, y, regression] = this.model!;
+    const fimps = await this._assessModel(X, y, regression);
+
+    this._addFeatureImportancesViewer(fimps);
+
     const [
       predErrorsTrue,
       predErrorsRandom,
-      fimps,
-    ] = await this._assessModel(X, y, regression);
+    ] = await this._validateModel(X, y, regression);
     this._addAccuracyViewer(predErrorsTrue, predErrorsRandom);
-    this._addFeatureImportancesViewer(fimps);
   }
 
   protected async _buildModel() {
@@ -120,14 +122,23 @@ export class RegressionAnalysis {
     X: number[][],
     y: number[],
     regression: Estimator,
-  ): Promise<[number[], number[], number[][]]> {
+  ): Promise<number[][]> {
+    this.progress.description = 'Calculating feature importances...';
     const fimpsRaw = await permutationImportance(X, y, regression, {progress: this.progress});
-    console.log(fimpsRaw);
+    return fimpsRaw;
+  }
 
+  protected async _validateModel(
+    X: number[][],
+    y: number[],
+    regression: Estimator,
+  ): Promise<[number[], number[]]> {
+    this.progress.description = 'Bootstrapping true predictions...';
     const errorsTrue = await bootstrap(X, y, regression, {nRepeats: 10, progress: this.progress});
     const yPermuted = permuteElements(y);
+    this.progress.description = 'Bootstrapping permuted predictions...';
     const errorsRandom = await bootstrap(X, yPermuted, regression, {nRepeats: 10, progress: this.progress});
-    return [errorsTrue, errorsRandom, fimpsRaw];
+    return [errorsTrue, errorsRandom];
   }
 
   protected _addAccuracyViewer(predErrorsTrue: number[], predErrorsRandom: number[]) {
@@ -138,6 +149,7 @@ export class RegressionAnalysis {
     );
 
     this.view.addViewer(errorsDf.unpivot(errorsDf.columns.names(), errorsDf.columns.names(), 'AUE', 'Value').plot.box({
+      title: 'Model cross-validation',
       valueColumnName: 'Value',
       categoryColumnName: 'AUE',
       binColorColumnName: 'Value',
@@ -164,6 +176,8 @@ export class RegressionAnalysis {
         'Position',
         'Importance',
       ).plot.box({
+        title: 'Features importance',
+        //description: "desc",
         valueColumnName: 'Importance',
         categoryColumnName: 'Position',
         binColorColumnName: 'Importance',
@@ -180,6 +194,7 @@ export class RegressionAnalysis {
     const corrDf = _measureAssociation(encDf, activityCol);
 
     this.view.addViewer(corrDf.plot.bar({
+      title: 'Correlation between an individual feature and activity',
       splitColumnName: corrDf.columns.names()[0],
       valueColumnName: corrDf.columns.names()[1],
       colorColumnName: corrDf.columns.names()[2],
@@ -191,6 +206,7 @@ export class RegressionAnalysis {
 
   protected _addPredictedVsObservedViewer(activityPredName: string) {
     this.view.addViewer(DG.VIEWER.SCATTER_PLOT, {
+      title: 'Reference vs. predicted activity',
       xColumnName: this.activityColumnName,
       yColumnName: activityPredName,
       sizeColumnName: activityPredName,
