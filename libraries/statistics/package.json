@@ -7,18 +7,19 @@
 	"version": "0.1.5",
 	"description": "",
 	"dependencies": {
-		"datagrok-api": ">0.95.4",
 		"cash-dom": "latest",
+		"datagrok-api": ">0.95.4",
 		"dayjs": "latest",
-		"jstat": "latest"
+		"jstat": "latest",
+		"simple-statistics": "^7.7.0"
 	},
 	"devDependencies": {
-		"ts-loader": "^9.2.6",
-		"typescript": "^4.2.3",
+		"@typescript-eslint/eslint-plugin": "latest",
+		"@typescript-eslint/parser": "latest",
 		"eslint": "latest",
 		"eslint-config-google": "latest",
-		"@typescript-eslint/eslint-plugin": "latest",
-		"@typescript-eslint/parser": "latest"
+		"ts-loader": "^9.2.6",
+		"typescript": "^4.2.3"
 	},
 	"scripts": {
 		"link": "npm link",
