@@ -1,3 +1,6 @@
+import * as stat from 'simple-statistics';
+const jStat = require('jstat');
+
 /**
  * Declares an estimator which must have both fit and predict methods.
  *
@@ -89,22 +92,6 @@ export async function bootstrap(
  * @param {any[]} X The data set used to train the estimator.
  * @param {any[]} y Targets.
  * @param {Estimator} estimator An estimator that is compatible with measure.
- * @param {(KnownMeasures | Measure)} [measure='AUE'] Measure to use.
- * @param {number} [nRepeats=5] Number of times to permute a feature.
- * @return {Promise<number[]>} Mean of feature importance over nRepeats.
- */
-
-/**
- * Calculates permutation importance for feature evaluation.
- *
- * The permutation importance is defined to be the difference
- * between the baseline metric and metric from permutating
- * the feature column.
- *
- * @export
- * @param {any[]} X The data set used to train the estimator.
- * @param {any[]} y Targets.
- * @param {Estimator} estimator An estimator that is compatible with measure.
  * @param {ImportanceOptions} [options={
  *     measure: 'AUE', // The measure chosen.
  *     nRepeats: 5,    // Number of cycles to run.
@@ -125,13 +112,11 @@ export async function permutationImportance(
   } = options;
 
   const nItems = X[0].length;
-  //const scores = new Array(nItems).fill(0);
   const scoresRaw = new Array(nItems).fill(0).map(() => new Array(nRepeats).fill(0));
   const m = typeof measure === 'function' ? measure : MeasuresMap[measure];
   const _sum = (a: number, b: number) => a + b;
 
   const _measure = async () => {
-    //await estimator.fit(X, y);
     const yPred = await estimator.predict(X);
     return m(y, yPred);
   };
@@ -153,7 +138,7 @@ export async function permutationImportance(
     const decreases = new Array(nRepeats).fill(-refScore);
 
     for (let j = 0; j < nRepeats; ++j) {
-      _setColumn(X, i, permuteElements(selF));
+      _setColumn(X, i, stat.shuffle(selF));
       decreases[j] += await _measure();
       scoresRaw[i][j] = decreases[j];
 
@@ -162,7 +147,6 @@ export async function permutationImportance(
       }
     }
     _setColumn(X, i, selF);
-    //scores[i] = decreases.reduce(_sum, 0) / nRepeats;
   }
   return scoresRaw;
 }
@@ -175,9 +159,107 @@ export async function permutationImportance(
  * @return {any[]} Permuted array.
  */
 export function permuteElements(items: any[]): any[] {
-  const nItems = items.length;
-  const index = _genPermutation(nItems);
-  return _apply(items, index);
+  return stat.shuffle(items);
+}
+
+/**
+ * Calculates confidence intervals for predicted samples.
+ *
+ * @param {number[]} x Feature population.
+ * @param {number[]} y Target variable.
+ * @param {number} [p=0.95] Confidence.
+ * @link {https://www.real-statistics.com/regression/confidence-and-prediction-intervals/}.
+ * @return {{lower: number[], upper: number[]}} Lower & upper bounds of the interval.
+ */
+
+/**
+ * Calculates confidence intervals for predicted samples.
+ *
+ * @link {https://www.real-statistics.com/regression/confidence-and-prediction-intervals/}.
+ * @param {number[]} x Feature population.
+ * @param {number[]} y Target variable.
+ * @param {number} [p=0.95] Confidence.
+ * @param {('CI' | 'PI')} method Confidence or prediction interval.
+ * @return {{lower: number[], upper: number[]}} Lower & upper bounds of the interval.
+ */
+function confIntervalLinear(
+  x: number[],
+  y: number[],
+  p: number,
+  method: 'CI' | 'PI',
+): {lower: number[], upper: number[]} {
+  const nItems = x.length;
+  const df = nItems - 2;
+  const xMean = stat.mean(x);
+  const model = stat.linearRegression(x.map((v, i) => [v, y[i]]));
+  const f = stat.linearRegressionLine(model);
+  const R2 = stat.sampleCorrelation(x, y) ** 2;
+  const syn = nItems * stat.variance(y);
+  const steyx = Math.sqrt(1. / df * syn * (1 - R2));
+  const devsq = nItems * stat.variance(x);
+  const tCrit = jStat.studentt.inv(p + (1 - p) / 2, df);
+
+  const seCI = (v: number) => steyx * Math.sqrt(1. / nItems + (v - xMean) ** 2 / devsq);
+  const sePI = (v: number) => steyx * Math.sqrt(1 + 1. / nItems + (v - xMean) ** 2 / devsq);
+  const se = method == 'CI' ? seCI : sePI;
+  const _bound = (v: number, sign: -1 | 1) => f(v) + sign * tCrit * se(v);
+  const _lBound = (v: number) => _bound(v, -1);
+  const _uBound = (v: number) => _bound(v, 1);
+
+  const lower = x.map(_lBound);
+  const upper = x.map(_uBound);
+  return {lower: lower, upper: upper};
+}
+
+export function getCIColors(x: number[], y: number[], p = 0.95, method: 'CI' | 'PI' = 'CI'): number[] {
+  const {lower: lower, upper: upper} = confIntervalLinear(x, y, p, method);
+
+  console.log(lower);
+  console.log(x);
+  console.log(y);
+  console.log(upper);
+
+  const colors = y.map((v, i) => lower[i] <= v && v <= upper[i] ? 0 : 1);
+  const nOutside = stat.sum(colors);
+  const nInside = y.length - nOutside;
+
+  /*if (nOutside > nInside) {
+    throw new Error(`Number of predictions outside (${nOutside}) CI is greater than that of inside (${nInside}).`);
+  }*/
+  console.log([nInside, nOutside]);
+  return colors;
+}
+
+function _percentileRange(x: number[], alpha: number = 0.05): [number, number] {
+  const lower = stat.quantile(x, alpha);
+  const upper = stat.quantile(x, 1 - alpha);
+  return [lower, upper];
+}
+
+function _percentileScore(x: number[], alpha = 0.05): number {
+  const [lower, upper] = _percentileRange(x, alpha);
+  return x.reduce((a: number, v: number) => a + (lower <= v && v <= upper ? 0 : 1), 0);
+}
+
+/**
+ * Calculates scores series for every feature column given.
+ *
+ * Score for a feature column is a number of samples beyond the percentile interval.
+ *
+ * @export
+ * @param {number[]} X Columns.
+ * @param {number} [alpha=0.05] Percentile threshold.
+ * @return {number[]} Scores.
+ */
+export function percentileScores(X: number[][], alpha = 0.05): number[] {
+  const nFeatures = X.length;
+  const scores = new Array(nFeatures);
+
+  for (let i = 0; i < nFeatures; ++i) {
+    scores[i] = _percentileScore(X[i], alpha);
+  }
+
+  return scores;
 }
 
 function _takeColumn(X: number[][], index: number): number[] {
@@ -219,12 +301,12 @@ class ShuffleSplit {
   public split(...items: any[][]): any[][][] {
     const nsItems = items.map((v: any[]) => v.length);
 
-    if (_std(nsItems) > 0) {
+    if (stat.standardDeviation(nsItems) > 0) {
       throw new Error('Arrays must have the same lenghts.');
     }
 
     const nItems = nsItems[0];
-    const index = _genPermutation(nItems);
+    const index = stat.shuffleInPlace(new Array(nItems).fill(0).map((_, i) => i));
     const nTrain = Math.round(nItems * (1 - this.testRatio));
 
     return items.map(function(item) {
@@ -232,38 +314,6 @@ class ShuffleSplit {
       return [permuted.slice(0, nTrain), permuted.slice(nTrain)];
     });
   }
-}
-
-/**
- * Computes standard deviation of array elements.
- *
- * @param {number[]} array The array.
- * @return {number} Standard deviation.
- */
-function _std(array: number[]): number {
-  const n = array.length;
-  const mean = array.reduce((a, b) => a + b) / n;
-  return Math.sqrt(array.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
-}
-
-/**
-   * Generates a permutation of indices ranging from 0 to n-1.
-   *
-   * @protected
-   * @param {number} n Length of the permuted index.
-   * @return {number[]} The permutation.
-   */
-function _genPermutation(n: number): number[] {
-  const index = new Array(n).fill(0).map((_, i: number) => i);
-
-  for (let i = 0; i < n; ++i) {
-    const pos = n - i - 1;
-    const spos = Math.round(Math.random() * pos);
-    const tmp = index[spos];
-    index[spos] = index[pos];
-    index[pos] = tmp;
-  }
-  return index;
 }
 
 /**

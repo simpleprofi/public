@@ -3,8 +3,7 @@ import * as DG from 'datagrok-api/dg';
 const {RandomForestRegressor} = require('random-forest/async');
 
 import {AlignedSequenceEncoder} from '@datagrok-libraries/utils/src/sequence-encoder';
-import {assert, calculateRMSD} from '@datagrok-libraries/utils/src/operations';
-import {Vector} from '@datagrok-libraries/utils/src/type-declarations';
+import {assert} from '@datagrok-libraries/utils/src/operations';
 import {kendallsTau} from '@datagrok-libraries/statistics/src/correlation-coefficient';
 import {
   permuteElements,
@@ -12,6 +11,8 @@ import {
   permutationImportance,
   Progress,
   Estimator,
+  getCIColors,
+  percentileScores,
 } from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
@@ -24,6 +25,7 @@ export class RegressionAnalysis {
   protected sequencesCol: DG.Column;
   protected activityColumnName: string;
   protected activityScalingMethod: string;
+  protected activityPredName: string;
   protected progress: Progress;
   protected scaledActivity: DG.Column | undefined;
   protected encodedDf: DG.DataFrame | undefined;
@@ -44,6 +46,7 @@ export class RegressionAnalysis {
     this.sequencesCol = sequencesCol;
     this.activityColumnName = activityColumnName;
     this.activityScalingMethod = activityScalingMethod;
+    this.activityPredName = `${this.activityColumnName}pred`;
     this.progress = progress;
   }
 
@@ -69,13 +72,17 @@ export class RegressionAnalysis {
       y,
       estimator,
     ] = await this._buildModel();
+
+    //const cols = (this.encodedDf.columns as DG.ColumnList).toList().map((v) => v.toList());
+    const bounds = getCIColors(activityPred, y, 0.95, 'PI');//percentileScores(cols);
+    const boundsName = `${this.activityPredName}color`;
+    _insertColumns(this.currentDf, [DG.Column.fromList('int', boundsName, bounds)]);
+
     this.model = [X, y, estimator];
 
-    const activityPredName = `${this.activityColumnName}pred`;
+    _insertColumns(this.currentDf, [DG.Column.fromList('double', this.activityPredName, activityPred)]);
 
-    _insertColumns(this.currentDf, [DG.Column.fromList('double', activityPredName, activityPred)]);
-
-    this._addPredictedVsObservedViewer(activityPredName);
+    this._addPredictedVsObservedViewer(boundsName);
   }
 
   public async assess() {
@@ -113,8 +120,6 @@ export class RegressionAnalysis {
     await regression.init();
     await regression.train(X, y);
     const pred = await regression.predict(X);
-    const RMSD = calculateRMSD(Vector.from(y), Vector.from(pred));
-    console.log(RMSD);
     return [pred, X, y, regression];
   }
 
@@ -204,13 +209,13 @@ export class RegressionAnalysis {
     }));
   }
 
-  protected _addPredictedVsObservedViewer(activityPredName: string) {
+  protected _addPredictedVsObservedViewer(ciName: string) {
     this.view.addViewer(DG.VIEWER.SCATTER_PLOT, {
       title: 'Reference vs. predicted activity',
       xColumnName: this.activityColumnName,
-      yColumnName: activityPredName,
-      sizeColumnName: activityPredName,
-      colorColumnName: this.activityColumnName,
+      yColumnName: this.activityPredName,
+      //sizeColumnName: this.activityPredName,
+      colorColumnName: ciName,
       showRegressionLine: true,
     });
   }
