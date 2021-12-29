@@ -230,16 +230,11 @@ export function getCIColors(x: number[], y: number[], p = 0.95, method: 'CI' | '
   return colors;
 }
 
-function _percentileRange(x: number[], alpha: number = 0.05): [number, number] {
+/*function _percentileScore(x: number[], alpha = 0.05): number {
   const lower = stat.quantile(x, alpha);
   const upper = stat.quantile(x, 1 - alpha);
-  return [lower, upper];
-}
-
-function _percentileScore(x: number[], alpha = 0.05): number {
-  const [lower, upper] = _percentileRange(x, alpha);
-  return x.reduce((a: number, v: number) => a + (lower <= v && v <= upper ? 0 : 1), 0);
-}
+  return x.reduce((a: number, v: number) => a + (lower <= v && v <= upper ? 0 : 1), 0) / x.length;
+}*/
 
 /**
  * Calculates scores series for every feature column given.
@@ -248,17 +243,25 @@ function _percentileScore(x: number[], alpha = 0.05): number {
  *
  * @export
  * @param {number[]} X Columns.
- * @param {number} [alpha=0.05] Percentile threshold.
- * @return {number[]} Scores.
+ * @return {Float32Array} Scores.
  */
-export function percentileScores(X: number[][], alpha = 0.05): number[] {
+export function percentileScores(X: number[][]): Float32Array {
   const nFeatures = X.length;
-  const scores = new Array(nFeatures);
+  const nSamples = X[0].length;
+  const scores = new Float32Array(nSamples).fill(0);
 
   for (let i = 0; i < nFeatures; ++i) {
-    scores[i] = _percentileScore(X[i], alpha);
+    const x = X[i];
+    const xSorted = x.sort();
+
+    for (let j = 0; j < nSamples; ++j) {
+      scores[j] += stat.quantileRankSorted(xSorted, x[j]);
+    }
   }
 
+  for (let j = 0; j < nSamples; ++j) {
+    scores[j] = Math.abs(0.5 - scores[j] / nFeatures);
+  }
   return scores;
 }
 
@@ -356,3 +359,16 @@ function _AUE(a: number[], b: number[]): number {
   return sum / b.length;
 }
 
+export function rSquared(x: number[], y: number[]): number {
+  const samples = x.map((v, i) => [v, y[i]]);
+  const model = stat.linearRegression(samples);
+  const f = stat.linearRegressionLine(model);
+  return stat.rSquared(samples, f);
+}
+
+export function residuals(x: number[], y: number[]): Float32Array {
+  const samples = x.map((v, i) => [v, y[i]]);
+  const model = stat.linearRegression(samples);
+  const f = stat.linearRegressionLine(model);
+  return new Float32Array(x.length).map((_, i) => y[i] - f(x[i]));
+}

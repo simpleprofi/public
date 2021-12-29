@@ -13,6 +13,8 @@ import {
   Estimator,
   getCIColors,
   percentileScores,
+  rSquared,
+  residuals,
 } from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
@@ -51,6 +53,8 @@ export class RegressionAnalysis {
   }
 
   public async init() {
+    const boundsName = `${this.activityPredName}color`;
+
     this.scaledActivity = await _scaleColumn(
       this.currentDf.getCol(this.activityColumnName),
       this.activityScalingMethod,
@@ -71,18 +75,31 @@ export class RegressionAnalysis {
       X,
       y,
       estimator,
+      res,
     ] = await this._buildModel();
 
-    //const cols = (this.encodedDf.columns as DG.ColumnList).toList().map((v) => v.toList());
-    const bounds = getCIColors(activityPred, y, 0.95, 'PI');//percentileScores(cols);
-    const boundsName = `${this.activityPredName}color`;
-    _insertColumns(this.currentDf, [DG.Column.fromList('int', boundsName, bounds)]);
+    const R2 = rSquared(y, activityPred);
+
+    if (false) {
+      const cols = (this.encodedDf!.columns as DG.ColumnList).toList().map((v) => v.toList());
+      const bounds = percentileScores(cols);
+      _insertColumns(this.currentDf, [DG.Column.fromFloat32Array(boundsName, bounds)]);
+    } else {
+      const bounds = getCIColors(activityPred, y, 0.95, 'PI');
+      _insertColumns(this.currentDf, [DG.Column.fromList('int', boundsName, bounds)]);
+    }
 
     this.model = [X, y, estimator];
 
     _insertColumns(this.currentDf, [DG.Column.fromList('double', this.activityPredName, activityPred)]);
 
-    this._addPredictedVsObservedViewer(boundsName);
+    this._addPredictedVsObservedViewer(boundsName, R2);
+
+    const residualsName = 'Residuals';
+
+    _insertColumns(this.currentDf, [DG.Column.fromFloat32Array(residualsName, res)]);
+
+    this._addResidualsViewer(residualsName);
   }
 
   public async assess() {
@@ -119,8 +136,10 @@ export class RegressionAnalysis {
 
     await regression.init();
     await regression.train(X, y);
+
     const pred = await regression.predict(X);
-    return [pred, X, y, regression];
+    const res = residuals(y, pred);
+    return [pred, X, y, regression, res];
   }
 
   protected async _assessModel(
@@ -209,15 +228,28 @@ export class RegressionAnalysis {
     }));
   }
 
-  protected _addPredictedVsObservedViewer(ciName: string) {
+  protected _addPredictedVsObservedViewer(ciName: string, R2: number) {
     this.view.addViewer(DG.VIEWER.SCATTER_PLOT, {
       title: 'Reference vs. predicted activity',
+      description: `R2 = ${R2.toFixed(2)}`,
       xColumnName: this.activityColumnName,
       yColumnName: this.activityPredName,
       //sizeColumnName: this.activityPredName,
       colorColumnName: ciName,
       showRegressionLine: true,
     });
+  }
+
+  protected _addResidualsViewer(residualsName: string) {
+    this.view.addViewer(this.currentDf.plot.bar({
+      title: 'Residuals',
+      splitColumnName: this.activityColumnName,
+      valueColumnName: residualsName,
+      colorColumnName: residualsName,
+      valueAggrType: 'sum',
+      barSortType: 'by category',
+      barSortOrder: 'asc',
+    }));
   }
 }
 
