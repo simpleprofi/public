@@ -2,26 +2,31 @@
 import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
-import './dataframe/df';
-import {tests} from "./test";
+import './dataframe/data_frame';
+import './shell/shell';
+import './shell/windows';
+import './viewer/viewer';
+import './views/layouts';
+import './dapi/files';
+import './dapi/fetch';
+import './dapi/admin';
+import './dapi/groups';
+import './ui/inputs';
+import './dapi/dapi';
+import './dapi/entities';
+import './dapi/layouts';
+import './dapi/projects';
+import './dapi/tables';
+import './dapi/user-data-storage';
+import './dapi/users';
+import './shell/ml';
 
+import {runTests} from "./test";
 export let _package = new DG.Package();
+
 
 //name: test
 export async function test() {
-
-  let results = tests.map(async (t) => {
-    let r: {category?: String, name?: String, success: boolean, result: String};
-    try {
-      r = {success: true, result: await t.test()};
-    } catch (x: any) {
-      r = {success: false, result: x.toString()};
-    }
-    r.category = t.category;
-    r.name = t.name;
-    return r;
-  });
-
-  let data = await Promise.all(results);
+  let data = await runTests();
   grok.shell.addTableView(DG.DataFrame.fromObjects(data)!);
 }
