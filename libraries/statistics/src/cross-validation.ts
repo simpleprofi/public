@@ -372,3 +372,16 @@ export function residuals(x: number[], y: number[]): Float32Array {
   const f = stat.linearRegressionLine(model);
   return new Float32Array(x.length).map((_, i) => y[i] - f(x[i]));
 }
+
+export function zScoreColoring(x: number[], y: number[]): Float32Array {
+  const nItems = x.length;
+  const res = Array.from(residuals(x, y));
+  const mean = stat.mean(res);
+  const sd = stat.standardDeviation(res);
+  const scores = new Float32Array(nItems);
+
+  for (let i = 0; i < nItems; ++i) {
+    scores[i] = stat.zScore(res[i], mean, sd);
+  }
+  return scores;
+}

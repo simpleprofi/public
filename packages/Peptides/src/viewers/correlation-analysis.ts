@@ -15,6 +15,7 @@ import {
   percentileScores,
   rSquared,
   residuals,
+  zScoreColoring,
 } from '@datagrok-libraries/statistics/src/cross-validation';
 
 //import os from 'os';
@@ -80,9 +81,9 @@ export class RegressionAnalysis {
 
     const R2 = rSquared(y, activityPred);
 
-    if (false) {
-      const cols = (this.encodedDf!.columns as DG.ColumnList).toList().map((v) => v.toList());
-      const bounds = percentileScores(cols);
+    if (true) {
+      //const cols = (this.encodedDf!.columns as DG.ColumnList).toList().map((v) => v.toList());
+      const bounds = zScoreColoring(y, activityPred);//percentileScores(cols);
       _insertColumns(this.currentDf, [DG.Column.fromFloat32Array(boundsName, bounds)]);
     } else {
       const bounds = getCIColors(activityPred, y, 0.95, 'PI');
