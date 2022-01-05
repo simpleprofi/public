@@ -96,11 +96,11 @@ export class RegressionAnalysis {
 
     this._addPredictedVsObservedViewer(boundsName, R2);
 
-    const residualsName = 'Residuals';
+    const residualsName = 'Residual';
 
     _insertColumns(this.currentDf, [DG.Column.fromFloat32Array(residualsName, res)]);
 
-    this._addResidualsViewer(residualsName);
+    this._addResidualsViewer(residualsName, boundsName);
   }
 
   public async assess() {
@@ -241,15 +241,12 @@ export class RegressionAnalysis {
     });
   }
 
-  protected _addResidualsViewer(residualsName: string) {
-    this.view.addViewer(this.currentDf.plot.bar({
-      title: 'Residuals',
-      splitColumnName: this.activityColumnName,
-      valueColumnName: residualsName,
-      colorColumnName: residualsName,
-      valueAggrType: 'sum',
-      barSortType: 'by category',
-      barSortOrder: 'asc',
+  protected _addResidualsViewer(residualsName: string, boundsName: string) {
+    this.view.addViewer(this.currentDf.plot.scatter({
+      title: 'Residual',
+      xColumnName: this.activityPredName,
+      yColumnName: residualsName,
+      colorColumnName: boundsName,
     }));
   }
 }
