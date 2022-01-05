@@ -3,7 +3,7 @@ import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 // TODO: clean up this module
 import {chemGetMorganFingerprints} from '../chem_searches';
-import {getRdKitWebRoot} from '../chem_common_rdkit'
+import {getRdKitWebRoot} from '../chem_common_rdkit';
 
 export async function chemSpace(table: DG.DataFrame, molColumn: DG.Column) {
   const fpColumn = await chemGetMorganFingerprints(molColumn);
@@ -11,6 +11,7 @@ export async function chemSpace(table: DG.DataFrame, molColumn: DG.Column) {
     const myWorker = new Worker(getRdKitWebRoot() + 'src/analysis/chem_stochastic_proximity_embedding.js');
     const fpBuffers = new Array(fpColumn.length);
     for (let i = 0; i < fpColumn.length; ++i) {
+      //@ts-ignore
       const buffer = fpColumn[i].getRawData();
       fpBuffers[i] = buffer;
     }
