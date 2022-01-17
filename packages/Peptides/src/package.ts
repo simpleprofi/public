@@ -17,6 +17,7 @@ import {SARViewer, SARViewerVertical} from './viewers/sar-viewer';
 import {peptideMoleculeWidget} from './widgets/peptide-molecule';
 import {SubstViewer} from './viewers/subst-viewer';
 import {runKalign} from './utils/multiple-sequence-alignment';
+import {calcDescriptors} from './utils/rdkit-descriptors';
 
 export const _package = new DG.Package();
 let tableGrid: DG.Grid;
@@ -192,4 +193,26 @@ export async function doMSA(table: DG.DataFrame, col: DG.Column): Promise<DG.Dat
   const msaCol = await runKalign(col);
   table.columns.add(msaCol);
   return table;
+}
+
+//name: Calculate RDKit descriptors
+//tags: viewer
+//input: dataframe table
+//input: column col
+//output: dataframe result
+export async function calcRDKitDescriptors(table: DG.DataFrame, col: DG.Column): Promise<DG.DataFrame> {
+  const newCol = await calcDescriptors(col);
+  table.columns.add(newCol);
+  //const fps = await grok.functions.call('Chem:getMorganFingerprints', {molColumn: newCol.name});
+  //console.log(fps);
+  return table;
+}
+
+//name: Calculate RDKit descriptors
+//tags: viewer
+//output: dataframe result
+export async function testCalcRDKitDescriptors(): Promise<DG.DataFrame> {
+  const table = await grok.data.files.openTable('Demo:TestJobs:Files:DemoFiles/bio/peptides.csv');
+  table.rows.removeAt(0, 640);
+  return calcRDKitDescriptors(table, table.getCol('AlignedSequence'));
 }
