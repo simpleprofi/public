@@ -7,18 +7,17 @@ import {
   AlignedSequenceCellRenderer,
   AminoAcidsCellRenderer,
 } from './utils/cell-renderer';
-import { Logo } from './viewers/logo-viewer';
-import { StackedBarChart } from './viewers/stacked-barchart-viewer';
-
-import { analyzePeptidesWidget } from './widgets/analyze-peptides';
-import { PeptideSimilaritySpaceWidget } from './utils/peptide-similarity-space';
-import { manualAlignmentWidget } from './widgets/manual-alignment';
-import { SARViewer, SARViewerVertical } from './viewers/sar-viewer';
-import { peptideMoleculeWidget, getMolecule } from './widgets/peptide-molecule';
-import { SubstViewer } from './viewers/subst-viewer';
-import { runKalign } from './utils/multiple-sequence-alignment';
-import { MonomerLibrary } from './monomer-library';
-
+import {Logo} from './viewers/logo-viewer';
+import {StackedBarChart} from './viewers/stacked-barchart-viewer';
+//import {MonomerLibrary} from './monomer-library';
+import {analyzePeptidesWidget} from './widgets/analyze-peptides';
+import {PeptideSimilaritySpaceWidget} from './utils/peptide-similarity-space';
+import {manualAlignmentWidget} from './widgets/manual-alignment';
+import {SARViewer, SARViewerVertical} from './viewers/sar-viewer';
+import {peptideMoleculeWidget} from './widgets/peptide-molecule';
+import {SubstViewer} from './viewers/subst-viewer';
+import {runKalign} from './utils/multiple-sequence-alignment';
+import {calcDescriptors} from './utils/rdkit-descriptors';
 
 export const _package = new DG.Package();
 let tableGrid: DG.Grid;
@@ -46,9 +45,8 @@ export async function Peptides() {
   const wikiLink = ui.link('wiki', 'https://github.com/datagrok-ai/public/blob/master/help/domains/bio/peptides.md');
   const textLink = ui.inlineText(['For more details, see our ', wikiLink, '.']);
 
-  let sdf = await _package.files.readAsText(`HELMMonomers_June10.sdf`);
-  let lib = new MonomerLibrary(sdf);
-
+  //const sdf = await _package.files.readAsText(`HELMMonomers_June10.sdf`);
+  //const lib = new MonomerLibrary(sdf);
 
   const appDescription = ui.info(
     [
@@ -193,10 +191,10 @@ export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
 //tags: panel, widgets
 //input: string peptide { semType: alignedSequence }
 //output: widget result
-export async function peptideMolfile(peptide: string): Promise<DG.Widget> {
+/*export async function peptideMolfile(peptide: string): Promise<DG.Widget> {
   const smiles = getMolecule(peptide);
-  return await grok.functions.call('Chem:molfile', { 'smiles': smiles });
-}
+  return await grok.functions.call('Chem:molfile', {'smiles': smiles});
+}*/
 
 //name: Multiple sequence alignment
 //tags: panel
@@ -207,4 +205,26 @@ export async function multipleSequenceAlignment(col: DG.Column): Promise<DG.Data
   const table = col.dataFrame;
   table.columns.add(msaCol);
   return table;
+}
+
+//name: Calculate RDKit descriptors
+//tags: viewer
+//input: dataframe table
+//input: column col
+//output: dataframe result
+export async function calcRDKitDescriptors(table: DG.DataFrame, col: DG.Column): Promise<DG.DataFrame> {
+  const newCol = await calcDescriptors(col);
+  table.columns.add(newCol);
+  //const fps = await grok.functions.call('Chem:getMorganFingerprints', {molColumn: newCol.name});
+  //console.log(fps);
+  return table;
+}
+
+//name: Calculate RDKit descriptors
+//tags: viewer
+//output: dataframe result
+export async function testCalcRDKitDescriptors(): Promise<DG.DataFrame> {
+  const table = await grok.data.files.openTable('Demo:TestJobs:Files:DemoFiles/bio/peptides.csv');
+  table.rows.removeAt(0, 640);
+  return calcRDKitDescriptors(table, table.getCol('AlignedSequence'));
 }
