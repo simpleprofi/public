@@ -33,13 +33,6 @@ export function addNewColumnDialog(call: DG.FuncCall | null = null): AddNewColum
   return new AddNewColumnDialog(call);
 }
 
-//name: formulaLinesEditor
-//input: dataframe src {optional: grok.shell.o}
-//top-menu: Data | Formula Lines...
-export function formulaLinesDialog(src: DG.DataFrame | DG.Viewer): FormulaLinesDialog {
-  return new FormulaLinesDialog(src);
-}
-
 //name: distributionProfiler
 //tags: viewer
 //output: viewer result
@@ -129,7 +122,7 @@ export function _usersSearch(s: string): Promise<any[]> {
 //description: Protein Data Bank
 //tags: search
 //input: string s
-//output: widget
+//output: widget w
 export function _pdbSearch(s: string): Promise<any> {
   return pdbSearch(s);
 }
@@ -137,7 +130,7 @@ export function _pdbSearch(s: string): Promise<any> {
 //description: PubChem
 //tags: search
 //input: string s
-//output: widget
+//output: widget w
 export function _pubChemSearch(s: string): Promise<any> {
   return pubChemSearch(s);
 }
@@ -145,7 +138,23 @@ export function _pubChemSearch(s: string): Promise<any> {
 //description: PubChem
 //tags: search
 //input: string s
-//output: widget
+//output: widget w
 export function _wikiSearch(s: string): Promise<any> {
   return wikiSearch(s);
 }
+
+//name: formulaLinesEditor
+//input: dataframe src {optional: grok.shell.o}
+//top-menu: Data | Formula Lines...
+export function formulaLinesDialog(src: DG.DataFrame | DG.Viewer): FormulaLinesDialog {
+  return new FormulaLinesDialog(src);
+}
+
+// Adds "Formula Lines" menu group to the Scatter Plot context menu:
+grok.events.onContextMenu.subscribe((args) => {
+  let src = args.args.context;
+  if (src instanceof DG.ScatterPlotViewer) {
+    let menu = args.args.menu.group('Formula Lines');
+    menu.item('Editor...',  async () => { formulaLinesDialog(src); });
+  }
+});
