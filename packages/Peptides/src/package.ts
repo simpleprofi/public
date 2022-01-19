@@ -215,8 +215,14 @@ export async function multipleSequenceAlignment(col: DG.Column): Promise<DG.Data
 export async function calcRDKitDescriptors(table: DG.DataFrame, col: DG.Column): Promise<DG.DataFrame> {
   const newCol = await calcDescriptors(col);
   table.columns.add(newCol);
-  //const fps = await grok.functions.call('Chem:getMorganFingerprints', {molColumn: newCol.name});
-  //console.log(fps);
+  const fps = await grok.functions.call('chem:getMorganFingerprints', {molColumn: newCol});
+  /*const fps = await grok.functions.call('ChemFingerprints', {
+    table: table.name,
+    smiles: col.name,
+    fingerprinter: 'Morgan/Circular',
+    parameters: {'nBits': 2048, 'useChirality': false, 'useBondTypes': true, 'useFeatures': false, 'radius': 1},
+  });*/
+  console.log(fps);
   return table;
 }
 
@@ -225,6 +231,7 @@ export async function calcRDKitDescriptors(table: DG.DataFrame, col: DG.Column):
 //output: dataframe result
 export async function testCalcRDKitDescriptors(): Promise<DG.DataFrame> {
   const table = await grok.data.files.openTable('Demo:TestJobs:Files:DemoFiles/bio/peptides.csv');
-  table.rows.removeAt(0, 640);
+  //grok.shell.addTableView(table);
+  //table.rows.removeAt(0, 600);
   return calcRDKitDescriptors(table, table.getCol('AlignedSequence'));
 }
