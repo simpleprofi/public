@@ -207,31 +207,28 @@ export async function multipleSequenceAlignment(col: DG.Column): Promise<DG.Data
   return table;
 }
 
-//name: Calculate RDKit descriptors
-//tags: viewer
+//#region Top menu
+
+//top-menu: Peptides | Descriptors | RDKit Morgan fingerprints
+//name: Calculate RDKit Morgan fingerprints
+//description: Calculate Morgan fingerprints based on RDKit
 //input: dataframe table
 //input: column col
-//output: dataframe result
-export async function calcRDKitDescriptors(table: DG.DataFrame, col: DG.Column): Promise<DG.DataFrame> {
+export async function calcRDKitDescriptors(table: DG.DataFrame, col: DG.Column) {
   const newCol = await calcDescriptors(col);
   table.columns.add(newCol);
   const fps = await grok.functions.call('chem:getMorganFingerprints', {molColumn: newCol});
-  /*const fps = await grok.functions.call('ChemFingerprints', {
-    table: table.name,
-    smiles: col.name,
-    fingerprinter: 'Morgan/Circular',
-    parameters: {'nBits': 2048, 'useChirality': false, 'useBondTypes': true, 'useFeatures': false, 'radius': 1},
-  });*/
   console.log(fps);
-  return table;
 }
+
+//#endregion
 
 //name: Calculate RDKit descriptors
 //tags: viewer
 //output: dataframe result
-export async function testCalcRDKitDescriptors(): Promise<DG.DataFrame> {
+/*export async function testCalcRDKitDescriptors(): Promise<DG.DataFrame> {
   const table = await grok.data.files.openTable('Demo:TestJobs:Files:DemoFiles/bio/peptides.csv');
   //grok.shell.addTableView(table);
   //table.rows.removeAt(0, 600);
   return calcRDKitDescriptors(table, table.getCol('AlignedSequence'));
-}
+}*/
