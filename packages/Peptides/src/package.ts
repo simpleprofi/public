@@ -14,7 +14,7 @@ import {analyzePeptidesWidget} from './widgets/analyze-peptides';
 import {PeptideSimilaritySpaceWidget} from './utils/peptide-similarity-space';
 import {manualAlignmentWidget} from './widgets/manual-alignment';
 import {SARViewer, SARViewerVertical} from './viewers/sar-viewer';
-import {peptideMoleculeWidget} from './widgets/peptide-molecule';
+import {peptideMoleculeWidget, peptideToSMILES} from './widgets/peptide-molecule';
 import {SubstViewer} from './viewers/subst-viewer';
 import {runKalign} from './utils/multiple-sequence-alignment';
 import {calcDescriptors} from './utils/rdkit-descriptors';
@@ -191,10 +191,10 @@ export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
 //tags: panel, widgets
 //input: string peptide { semType: alignedSequence }
 //output: widget result
-/*export async function peptideMolfile(peptide: string): Promise<DG.Widget> {
-  const smiles = getMolecule(peptide);
+export async function peptideMolfile(peptide: string): Promise<DG.Widget> {
+  const smiles = peptideToSMILES(peptide);
   return await grok.functions.call('Chem:molfile', {'smiles': smiles});
-}*/
+}
 
 //name: Multiple sequence alignment
 //tags: panel
