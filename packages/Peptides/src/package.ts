@@ -11,7 +11,7 @@ import {Logo} from './viewers/logo-viewer';
 import {StackedBarChart} from './viewers/stacked-barchart-viewer';
 
 import {analyzePeptidesWidget} from './widgets/analyze-peptides';
-import {PeptideSimilaritySpaceWidget} from './utils/peptide-similarity-space';
+import {PeptideSimilaritySpaceViewer} from './utils/peptide-similarity-space';
 import {manualAlignmentWidget} from './widgets/manual-alignment';
 import {SARViewer, SARViewerVertical} from './viewers/sar-viewer';
 import {peptideMoleculeWidget, getMolecule} from './widgets/peptide-molecule';
@@ -189,8 +189,10 @@ export function manualAlignment(monomer: string) {
 //input: column col {semType: alignedSequence}
 //output: widget result
 export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
-  const widget = new PeptideSimilaritySpaceWidget(col, view ?? grok.shell.v);
-  return await widget.draw();
+  // const widget = new PeptideSimilaritySpaceWidget(col, view ?? grok.shell.v);
+  // return await widget.draw();
+  const widget = await PeptideSimilaritySpaceViewer.create(col.dataFrame, {alignedSequencesColumn: col});
+  return new DG.Widget(widget.root);
 }
 
 //name: Molfile

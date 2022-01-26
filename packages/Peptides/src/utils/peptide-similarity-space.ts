@@ -1,6 +1,7 @@
 /* Do not change these import lines. Datagrok will import API library in exactly the same manner */
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
+import {_toJson} from 'datagrok-api/src/utils';
 
 import {getSequenceMolecularWeight} from './molecular-measure';
 import {AlignedSequenceEncoder} from '@datagrok-libraries/bio/src/sequence-encoder';
@@ -11,19 +12,21 @@ import {
 import {StringMeasure} from '@datagrok-libraries/ml/src/string-measure';
 import {Coordinates} from '@datagrok-libraries/utils/src/type-declarations';
 
+const api = <any>window;
+
 /**
  * Finds a column with an activity.
  *
  * @param {DG.DataFrame} table The data frame to search for.
- * @return {(string | null)} Column name or null if not found.
+ * @return {(string | undefined)} Column name or undefined if not found.
  */
-function inferActivityColumnsName(table: DG.DataFrame): string | null {
+function inferActivityColumnsName(table: DG.DataFrame): string | undefined {
   const re = /activity|ic50/i;
   for (const name of table.columns.names()) {
     if (name.match(re))
       return name;
   }
-  return null;
+  return undefined;
 }
 
 /**
@@ -37,44 +40,47 @@ export function cleanAlignedSequencesColumn(col: DG.Column): Array<string> {
   return col.toList().map((v, _) => AlignedSequenceEncoder.clean(v));
 }
 
-/**
- * Creates scatter plot with sequences embeded.
- *
- * @export
- * @param {DG.DataFrame} table The table containing samples.
- * @param {DG.Column} alignedSequencesColumn Samples column.
- * @param {string} method Embedding method to apply.
- * @param {string} measure Distance metric.
- * @param {number} cyclesCount Number of cycles to repeat.
- * @param {(DG.TableView | null)} view View to add scatter plot to
- * @param {(string | null)} [activityColumnName] Activity containing column to assign it to points radius.
- * @param {boolean} [zoom=false] Whether to fit view.
- * @return {Promise<DG.ScatterPlotViewer>} A viewer.
- */
-export async function createPeptideSimilaritySpaceViewer(
-  table: DG.DataFrame,
-  alignedSequencesColumn: DG.Column,
-  method: string,
-  measure: string,
-  cyclesCount: number,
-  view: DG.TableView | null,
-  activityColumnName?: string | null,
-): Promise<DG.ScatterPlotViewer> {
-  const pi = DG.TaskBarProgressIndicator.create('Creating embedding.');
+interface PeptideSpaceDataOptions {
+  alignedSequencesColumn: DG.Column;
+  activityColumnName?: string;
+  method?: string;
+  metrics?: string;
+  cycles?: number;
+}
 
-  activityColumnName = activityColumnName ?? inferActivityColumnsName(table);
+class PeptideSpaceData {
+  protected axesNames = ['~X', '~Y', '~MW'];
+  protected availableMethods = DimensionalityReducer.availableMethods;
+  protected availableMetrics = StringMeasure.getMetricByDataType('String');
+  protected table: DG.DataFrame;
+  protected alignedSequencesColumn: DG.Column;
+  protected activityColumnName?: string;
+  protected method: string;
+  protected metrics: string;
+  protected cycles: number;
+  protected initialized: boolean = false;
+  protected needUpdate: boolean = false;
 
-  const axesNames = ['~X', '~Y', '~MW'];
-  const columnData = alignedSequencesColumn.toList().map((v, _) => AlignedSequenceEncoder.clean(v));
+  constructor(options: PeptideSpaceDataOptions) {
+    this.table = options.alignedSequencesColumn.dataFrame;
+    this.alignedSequencesColumn = options.alignedSequencesColumn;
+    this.activityColumnName = options.activityColumnName ?? inferActivityColumnsName(this.table);
+    this.method = options.method ?? this.availableMethods[0];
+    this.metrics = options.metrics ?? this.availableMetrics[0];
+    this.cycles = options.cycles ?? 100;
+    this.reset();
+  }
 
-  const embcols = await createDimensinalityReducingWorker(columnData, method, measure, cyclesCount);
+  protected async _reduce(sequences: string[]): Promise<DG.Column[]> {
+    const embcols = await createDimensinalityReducingWorker(sequences, this.method, this.metrics, this.cycles);
+    const columns = Array.from(
+        embcols as Coordinates,
+        (v: Float32Array, k) => (DG.Column.fromFloat32Array(this.axesNames[k], v)),
+    );
+    return columns;
+  }
 
-  const columns = Array.from(
-    embcols as Coordinates,
-    (v: Float32Array, k) => (DG.Column.fromFloat32Array(axesNames[k], v)),
-  );
-
-  function _getMW(sequences = columnData) {
+  protected _addMolweight(sequences: string[]): Float32Array {
     const mw: Float32Array = new Float32Array(sequences.length).fill(0);
     let currentSequence;
 
@@ -85,149 +91,184 @@ export async function createPeptideSimilaritySpaceViewer(
     return mw;
   }
 
-  columns.push(DG.Column.fromFloat32Array('~MW', _getMW()));
+  protected _addAxes(columns: DG.Column[]) {
+    const edf = DG.DataFrame.fromColumns(columns);
 
-  const edf = DG.DataFrame.fromColumns(columns);
+    for (const axis of this.axesNames) {
+      const col = this.table.col(axis);
+      const newCol = edf.getCol(axis);
 
-  // Add new axes.
-  for (const axis of axesNames) {
-    const col = table.col(axis);
-    const newCol = edf.getCol(axis);
-
-    if (col != null) {
-      for (let i = 0; i < newCol.length; ++i) {
-        const v = newCol.get(i);
-        table.set(axis, i, v);
-      }
-    } else
-      table.columns.insert(newCol);
+      if (col != null) {
+        for (let i = 0; i < newCol.length; ++i) {
+          const v = newCol.get(i);
+          this.table.set(axis, i, v);
+        }
+      } else
+        this.table.columns.insert(newCol);
+    }
   }
 
-  const viewerOptions = {x: '~X', y: '~Y', color: activityColumnName ?? '~MW', size: '~MW'};
-  const viewer = DG.Viewer.scatterPlot(table, viewerOptions);
+  async init(force: boolean = false) {
+    if (!this.initialized || this.needUpdate || force) {
+      const sequences = cleanAlignedSequencesColumn(this.alignedSequencesColumn);
+      const columns = await this._reduce(sequences);
 
-  if (view !== null)
-    view.addViewer(viewer);
+      if (!this.needUpdate) {
+        const mw = this._addMolweight(sequences);
+        columns.push(DG.Column.fromFloat32Array(this.axesNames[columns.length], mw));
+      }
 
-  pi.close();
-  return viewer;
+      this._addAxes(columns);
+      this.initialized = true;
+      this.needUpdate = false;
+    }
+  }
+
+  protected _clearColumns(update: boolean = false) {
+    const columns = (this.table.columns as DG.ColumnList);
+    const toConsider = update ? this.axesNames.slice(0, this.axesNames.length - 1) : this.axesNames;
+
+    for (const name of toConsider) {
+      if (name in columns.names)
+        columns.remove(name);
+    }
+  }
+
+  reset() {
+    if (this.initialized) {
+      this._clearColumns();
+      this.initialized = false;
+      this.needUpdate = false;
+    }
+  }
+
+  protected _markUpdate() {
+    this._clearColumns(true);
+    this.needUpdate = true;
+  }
+
+  get methods() {
+    return this.availableMethods;
+  }
+
+  get metrices() {
+    return this.availableMetrics;
+  }
+
+  get currentMethod() {
+    return this.method;
+  }
+
+  set currentMethod(method: string) {
+    this.method = method;
+    this._markUpdate();
+  }
+
+  get currentMetrics() {
+    return this.metrics;
+  }
+
+  set currentMetrics(metrics: string) {
+    this.metrics = metrics;
+    this._markUpdate();
+  }
+
+  get currentCycles() {
+    return this.cycles;
+  }
+
+  set currentCycles(cycles: number) {
+    this.cycles = cycles;
+    this._markUpdate();
+  }
+
+  get plotOptions() {
+    return {
+      x: this.axesNames[0],
+      y: this.axesNames[1],
+      color: this.activityColumnName ?? this.axesNames[2],
+      size: this.axesNames[2],
+    };
+  }
 }
 
-/**
- * Controls creation of the peptide similarity space viewer.
- *
- * @export
- * @class PeptideSimilaritySpaceWidget
- */
-export class PeptideSimilaritySpaceWidget {
-  protected method: string;
-  protected metrics: string;
-  protected cycles: number = 100;
-  protected currentDf: DG.DataFrame;
-  protected alignedSequencesColumn: DG.Column;
-  protected availableMethods: string[];
-  protected availableMetrics: string[];
-  protected viewer: HTMLElement;
-  view: DG.TableView;
+export class PeptideSimilaritySpaceViewer extends DG.ScatterPlotViewer {
+  protected _data: PeptideSpaceData;
+  protected _inputs: HTMLElement;
 
-  /**
-   * Creates an instance of PeptideSimilaritySpaceWidget.
-   * @param {DG.Column} alignedSequencesColumn The column to get amino acid sequences from.
-   * @param {DG.TableView} view Current view
-   * @memberof PeptideSimilaritySpaceWidget
-   */
-  constructor(alignedSequencesColumn: DG.Column, view: DG.TableView) {
-    this.availableMethods = DimensionalityReducer.availableMethods;
-    this.availableMetrics = StringMeasure.getMetricByDataType('String');
-    this.method = this.availableMethods[0];
-    this.metrics = this.availableMetrics[0];
-    this.currentDf = alignedSequencesColumn.dataFrame;
-    this.alignedSequencesColumn = alignedSequencesColumn;
-    this.viewer = ui.div([]);
-    this.view = view;
+  constructor(dart: any, options: PeptideSpaceDataOptions) {
+    super(dart);
+    this._data = new PeptideSpaceData(options);
+    this._inputs = this._drawInputs();
+    //this._addDetachedPatch();
   }
 
-  /**
-   * Creates viewer itself.
-   *
-   * @return {Promise<DG.Viewer>} the viewer.
-   * @memberof PeptideSimilaritySpaceWidget
-   */
-  public async drawViewer(): Promise<DG.Viewer> {
-    const viewer = await createPeptideSimilaritySpaceViewer(
-      this.currentDf,
-      this.alignedSequencesColumn,
-      this.method,
-      this.metrics,
-      this.cycles,
-      null,
-      null,
-    );
-    viewer.root.style.width = 'auto';
-    return viewer;
+  static async create(
+    t: DG.DataFrame,
+    opts: PeptideSpaceDataOptions,
+    options?: object | null,
+  ): Promise<PeptideSimilaritySpaceViewer> {
+    const plot = new PeptideSimilaritySpaceViewer(api.grok_Viewer_ScatterPlot(t.dart, _toJson(options)), opts);
+    await plot.init();
+    return plot;
   }
 
-  /**
-   * Updates the viewer on options changes.
-   *
-   * @protected
-   * @memberof PeptideSimilaritySpaceWidget
-   */
-  protected async updateViewer() {
-    const viewer = await this.drawViewer();
-    this.viewer.lastChild?.remove();
-    this.viewer.appendChild(viewer.root);
-    viewer.dataFrame?.fireValuesChanged();
+  async init() {
+    this.setOptions(this._data.plotOptions);
+    await this._redraw();
   }
 
-  /**
-   * Adds input controls to manage the viewer's parameters.
-   *
-   * @protected
-   * @return {Promise<HTMLElement>} Bunch of control elements.
-   * @memberof PeptideSimilaritySpaceWidget
-   */
-  protected async drawInputs(): Promise<HTMLElement> {
-    const methodsList = ui.choiceInput('Embedding method', this.method, this.availableMethods,
+  protected async _redraw() {
+    await this._data.init();
+    //this.root.lastChild?.remove();
+    //this.root.appendChild(this.root);
+    this.dataFrame?.fireValuesChanged();
+  }
+
+  protected _drawInputs(): HTMLElement {
+    const methodsList = ui.choiceInput('Embedding method', this._data.currentMethod, this._data.methods,
       async (currentMethod: string) => {
-        this.method = currentMethod;
-        await this.updateViewer();
+        this._data.currentMethod = currentMethod;
+        await this._redraw();
       },
     );
     methodsList.setTooltip('Embedding method to apply to the dataset.');
 
-    const metricsList = ui.choiceInput('Distance metric', this.metrics, this.availableMetrics,
+    const metricsList = ui.choiceInput('Distance metric', this._data.currentMetrics, this._data.metrices,
       async (currentMetrics: string) => {
-        this.metrics = currentMetrics;
-        await this.updateViewer();
+        this._data.currentMetrics = currentMetrics;
+        await this._redraw();
       },
     );
     metricsList.setTooltip('Custom distance metric to pass to the embedding procedure.');
 
-    const cyclesSlider = ui.intInput('Cycles count', this.cycles,
+    const cyclesSlider = ui.intInput('Cycles count', this._data.currentCycles,
       async (currentCycles: number) => {
-        this.cycles = currentCycles;
-        await this.updateViewer();
+        this._data.currentCycles = currentCycles;
+        await this._redraw();
       },
     );
     cyclesSlider.setTooltip('Number of cycles affects the embedding quality.');
-
     return ui.inputs([methodsList, metricsList, cyclesSlider]);
   }
 
-  /**
-   * Draws a viewer on property panel.
-   *
-   * @return {Promise<DG.Widget>} The corresponding widget.
-   * @memberof PeptideSimilaritySpaceWidget
-   */
-  public async draw(): Promise<DG.Widget> {
-    const plot = await this.drawViewer();
-    const inputs = await this.drawInputs();
-    const elements = ui.divV([plot.root, inputs]);
+  async onFrameAttached(dataFrame: DG.DataFrame): Promise<void> {
+    super.onFrameAttached(dataFrame);
+    await this._data.init();
+  }
 
-    // Move detaching scatterplot to the grid.
-    plot.onEvent('d4-viewer-detached').subscribe((args) => {
+  detach(): void {
+    super.detach();
+    this._data.reset();
+  }
+
+  get root(): HTMLElement {
+    super.root.style.width = 'auto';
+    return ui.divV([super.root, this._inputs]);
+  }
+
+  protected _addDetachedPatch() {
+    this.onEvent('d4-viewer-detached').subscribe((args) => {
       let found = false;
 
       for (const v of this.view.viewers) {
@@ -238,9 +279,7 @@ export class PeptideSimilaritySpaceWidget {
       }
 
       if (!found)
-        this.view.addViewer(plot);
+        this.view.addViewer(this);
     });
-
-    return new DG.Widget(elements);
   }
 }
