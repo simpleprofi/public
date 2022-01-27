@@ -1,7 +1,7 @@
 import * as DG from 'datagrok-api/dg';
 
 import {expect} from '@datagrok-libraries/utils/src/test';
-import {PeptideSimilaritySpaceWidget, createPeptideSimilaritySpaceViewer} from '../utils/peptide-similarity-space';
+import {PeptideSpaceData, PeptideSimilaritySpaceViewer} from '../utils/peptide-similarity-space';
 import {
   createDimensinalityReducingWorker,
 } from '@datagrok-libraries/ml/src/workers/dimensionality-reducing-worker-creator';
@@ -20,14 +20,16 @@ export function _testTableIsNotEmpty(table: DG.DataFrame) {
  * Tests if peptide space viewer is drawing without exceptions.
  *
  * @param {DG.DataFrame} table Demo table.
- * @param {DG.TableView} view Demo view.
+ * @param {DG.Column} alignedSequenceColumn Aligned sequence column.
  */
-export async function _testViewerIsDrawing(table: DG.DataFrame, view: DG.TableView) {
+export async function _testViewerIsDrawing(table: DG.DataFrame, alignedSequenceColumn: DG.Column) {
   let noException = true;
 
   try {
-    const widget = new PeptideSimilaritySpaceWidget(table.getCol('AlignedSequence'), view);
-    await widget.draw();
+    await PeptideSimilaritySpaceViewer.create(
+      table,
+      {alignedSequencesColumn: alignedSequenceColumn},
+    );
   } catch (error) {
     noException = false;
   }
@@ -60,38 +62,35 @@ export async function _testDimensionalityReducer(columnData: Array<string>, meth
 }
 
 /**
- * Tests if PeptideSimilaritySpaceViewer works for both the method and the measure chosen.
+ * Tests if PeptideSpaceData works for both the method and the measure chosen.
  *
- * @export
- * @param {DG.DataFrame} table Table.
  * @param {DG.Column} alignedSequencesColumn Aligned sequences column.
+ * @param {DG.Column} activityColumn Activity column.
  * @param {string} method Embedding method.
  * @param {string} measure Strings similarity measure.
  * @param {number} cyclesCount Number of embedding iterations.
- * @param {(DG.TableView | null)} view Viewer to show graphics on.
- * @param {(string | null)} [activityColumnName] Name of column with activity.
  */
-export async function _testPeptideSimilaritySpaceViewer(
-  table: DG.DataFrame,
+export async function _testPeptideSpaceData(
   alignedSequencesColumn: DG.Column,
+  activityColumn: DG.Column,
   method: string,
   measure: string,
   cyclesCount: number,
 ) {
   let noException = true;
-  let viewer;
+  let data: PeptideSpaceData;
   let df: DG.DataFrame;
 
   try {
-    viewer = await createPeptideSimilaritySpaceViewer(
-      table,
-      alignedSequencesColumn,
-      method,
-      measure,
-      cyclesCount,
-      null,
-    );
-    df = viewer.dataFrame!;
+    data = new PeptideSpaceData({
+      alignedSequencesColumn: alignedSequencesColumn,
+      activityColumnName: activityColumn.name,
+      method: method,
+      metrics: measure,
+      cycles: cyclesCount,
+    });
+    await data.init();
+    df = data.currentTable;
   } catch (error) {
     noException = false;
   }
@@ -101,8 +100,7 @@ export async function _testPeptideSimilaritySpaceViewer(
   noException = true;
 
   try {
-    const axesNames = ['~X', '~Y', '~MW'];
-    const axes = axesNames.map((v) => df?.getCol(v).getRawData() as Float32Array);
+    const axes = data!.axesNames.map((v) => df.getCol(v).getRawData() as Float32Array);
 
     for (const ax of axes)
       expect(ax.every((v) => v !== null && v !== NaN), true);

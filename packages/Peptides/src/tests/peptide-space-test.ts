@@ -2,7 +2,7 @@ import {/*before, after, */category, test} from '@datagrok-libraries/utils/src/t
 import {
   _testViewerIsDrawing,
   _testDimensionalityReducer,
-  _testPeptideSimilaritySpaceViewer,
+  _testPeptideSpaceData,
   _testTableIsNotEmpty,
 } from './utils';
 import {DimensionalityReducer} from '@datagrok-libraries/ml/src/reduce-dimensionality';
@@ -10,12 +10,10 @@ import {cleanAlignedSequencesColumn} from '../utils/peptide-similarity-space';
 import {aligned1} from './test-data';
 
 import * as DG from 'datagrok-api/dg';
-import * as grok from 'datagrok-api/grok';
 
 export const _package = new DG.Package();
 
 let table: DG.DataFrame;
-let view: DG.TableView;
 
 //const table = await grok.data.loadTable(`${_package.webRoot}files/aligned.csv`);
 //'/home/www/data/dev/packages/data/peptides/aligned.csv');
@@ -40,17 +38,18 @@ category('peptides', async () => {
 
   //table = await grok.data.files.openTable('Demo:Files/bio/peptides.csv');
   table = DG.DataFrame.fromCsv(aligned1);
-  view = grok.shell.addTableView(table);
+
+  const alignedSequencesColumn = table.getCol('AlignedSequence');
+  const activityColumn = table.getCol('IC50');
 
   test('peptide_space.test_table.is_not_empty', async () => {
     _testTableIsNotEmpty(table);
   });
 
   test('peptide_space.PeptideSimilaritySpaceWidget.is_drawing', async () => {
-    await _testViewerIsDrawing(table, view);
+    await _testViewerIsDrawing(table, alignedSequencesColumn);
   });
 
-  const alignedSequencesColumn = table.getCol('AlignedSequence');
   const columnData = cleanAlignedSequencesColumn(alignedSequencesColumn);
 
   for (const method of DimensionalityReducer.availableMethods) {
@@ -64,7 +63,7 @@ category('peptides', async () => {
   for (const method of DimensionalityReducer.availableMethods) {
     for (const measure of DimensionalityReducer.metricDataTypes['String']) {
       test(`peptide_space.PeptideSimilaritySpaceViewer.${method}.${measure}.is_proper`, async () => {
-        await _testPeptideSimilaritySpaceViewer(table, alignedSequencesColumn, method, measure, 100);//, view);
+        await _testPeptideSpaceData(alignedSequencesColumn, activityColumn, method, measure, 100);
       });
     }
   }
