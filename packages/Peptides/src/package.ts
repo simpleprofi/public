@@ -18,7 +18,6 @@ import {SARViewer, SARViewerVertical} from './viewers/sar-viewer';
 import {peptideMoleculeWidget, getMolecule} from './widgets/peptide-molecule';
 import {SubstViewer} from './viewers/subst-viewer';
 import {runKalign} from './utils/multiple-sequence-alignment';
-import { SemanticValue } from 'datagrok-api/dg';
 
 export const _package = new DG.Package();
 let tableGrid: DG.Grid;
@@ -229,14 +228,14 @@ export async function multipleSequenceAlignment(col: DG.Column): Promise<DG.Data
 //input: dataframe table {semType: Substitution}
 //output: widget result
 export async function peptideSubstitution(table: DG.DataFrame): Promise<DG.Widget> {
-  if (!table) {
+  if (!table)
     return new DG.Widget(ui.label('No difference'));
-  }
-  let initialCol: DG.Column = table.columns.byName('Initial');
-  let substitutedCol: DG.Column = table.columns.byName('Substituted');
+
+  const initialCol: DG.Column = table.columns.byName('Initial');
+  const substitutedCol: DG.Column = table.columns.byName('Substituted');
 
   for (let i = 0; i < initialCol.length; ++i) {
-    let concat = initialCol.get(i) + '#' + substitutedCol.get(i);
+    const concat = initialCol.get(i) + '#' + substitutedCol.get(i);
     initialCol.set(i, concat);
   }
 
