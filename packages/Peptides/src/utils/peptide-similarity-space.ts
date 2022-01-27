@@ -10,7 +10,7 @@ import {DimensionalityReducer} from '@datagrok-libraries/ml/src/reduce-dimension
 import {
   createDimensinalityReducingWorker,
 } from '@datagrok-libraries/ml/src/workers/dimensionality-reducing-worker-creator';
-import {StringMeasure} from '@datagrok-libraries/ml/src/string-measure';
+import {Measure, StringMetrics} from '@datagrok-libraries/ml/src/typed-metrics';
 import {Coordinates} from '@datagrok-libraries/utils/src/type-declarations';
 
 const api = <any>window;
@@ -53,7 +53,7 @@ interface PeptideSpaceDataOptions {
 export class PeptideSpaceData {
   public axesNames = ['~X', '~Y', '~MW'];
   protected availableMethods = DimensionalityReducer.availableMethods;
-  protected availableMetrics = StringMeasure.getMetricByDataType('String');
+  protected availableMetrics = Measure.getMetricByDataType('String');
   protected table: DG.DataFrame;
   protected alignedSequencesColumn: DG.Column;
   protected activityColumnName?: string;
@@ -81,7 +81,11 @@ export class PeptideSpaceData {
    * @return {Promise<DG.Column[]>} Reduced coordinates.
    */
   protected async _reduce(sequences: string[]): Promise<DG.Column[]> {
-    const embcols = await createDimensinalityReducingWorker(sequences, this.method, this.metrics, this.cycles);
+    const embcols = await createDimensinalityReducingWorker(
+      {data: sequences, metric: this.metrics as StringMetrics},
+      this.method,
+      this.cycles,
+    );
     const columns = Array.from(
         embcols as Coordinates,
         (v: Float32Array, k) => (DG.Column.fromFloat32Array(this.axesNames[k], v)),
