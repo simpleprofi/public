@@ -5,7 +5,7 @@ import * as DG from 'datagrok-api/dg';
 import * as OCL from 'openchemlib/full.js';
 import $ from "cash-dom";
 import {defineAxolabsPattern} from "./defineAxolabsPattern";
-import {map, stadardPhosphateLinkSmiles, SYNTHESIZERS, TECHNOLOGIES} from "./map";
+import {map, stadardPhosphateLinkSmiles, SYNTHESIZERS, TECHNOLOGIES, MODIFICATIONS} from "./map";
 
 export let _package = new DG.Package();
 
@@ -19,7 +19,7 @@ function getAllCodesOfSynthesizer(synthesizer: string) {
   let codes: string[] = [];
   for (let technology of Object.keys(map[synthesizer]))
     codes = codes.concat(Object.keys(map[synthesizer][technology]));
-  return codes;
+  return codes.concat(Object.keys(MODIFICATIONS));
 }
 
 function getListOfPossibleSynthesizersByFirstMatchedCode(sequence: string): string[] {
@@ -42,7 +42,7 @@ function getListOfPossibleTechnologiesByFirstMatchedCode(sequence: string, synth
   return technologies;
 }
 
-function isValid(sequence: string) {
+function isValidSequence(sequence: string) {
   let possibleSynthesizers = getListOfPossibleSynthesizersByFirstMatchedCode(sequence);
   if (possibleSynthesizers.length == 0)
     return { indexOfFirstNotValidCharacter: 0, expectedType: null };
@@ -141,6 +141,8 @@ function getObjectWithCodesAndSmiles() {
     for (let technology of Object.keys(map[synthesizer]))
       for (let code of Object.keys(map[synthesizer][technology]))
         obj[code] = map[synthesizer][technology][code].SMILES;
+  for (let dropdown of Object.keys(MODIFICATIONS))
+    obj[dropdown] = MODIFICATIONS[dropdown].left;
   return obj;
 }
 
@@ -150,18 +152,28 @@ function sequenceToSmiles(sequence: string) {
   let i = 0, smiles = '', codesList = [];
   const links = ['s', 'ps', '*'];
   const includesStandardLinkAlready = ["e", "h", "g", "f", "i", "l", "k", "j"];
+  const dropdowns = Object.keys(MODIFICATIONS);
   while (i < sequence.length) {
     let code = codes.find((s) => s == sequence.slice(i, i + s.length))!;
     i += code.length;
     codesList.push(code);
   }
-  for (let i = 0; i < codesList.length; i++)
-    smiles += (links.includes(codesList[i]) || (includesStandardLinkAlready.includes(codesList[i])) || (i < codesList.length - 1 && links.includes(codesList[i + 1]))) ?
-      obj[codesList[i]] :
-      obj[codesList[i]] + stadardPhosphateLinkSmiles;
+  for (let i = 0; i < codesList.length; i++) {
+    if (dropdowns.includes(codesList[i])) {
+      smiles += (i > codesList.length / 2) ?
+        MODIFICATIONS[codesList[i]].right :
+        MODIFICATIONS[codesList[i]].left;
+      if (i < codesList.length - 1 && !links.includes(codesList[i + 1]))
+        smiles += stadardPhosphateLinkSmiles;
+    } else {
+      smiles += (links.includes(codesList[i]) || (includesStandardLinkAlready.includes(codesList[i])) || (i < codesList.length - 1 && links.includes(codesList[i + 1]))) ?
+        obj[codesList[i]] :
+        obj[codesList[i]] + stadardPhosphateLinkSmiles;
+    }
+  }
   smiles = smiles.replace(/OO/g, 'O');
   // smiles = smiles.replace(/@/g, ''); // Remove StereoChemistry on the Nucleic acid chain and remove the Chiral label
-  return codesList[codesList.length - 1] == 'ps' ? smiles : smiles.slice(0, smiles.length - stadardPhosphateLinkSmiles.length + 1);
+  return links.includes(codesList[codesList.length - 1]) ? smiles : smiles.slice(0, smiles.length - stadardPhosphateLinkSmiles.length + 1);
 }
 
 //name: Sequence Translator
@@ -200,9 +212,10 @@ export function sequenceTranslator() {
       semTypeOfInputSequence.textContent = 'Detected input type: ' + outputSequenceObj.type;
 
       let width = $(window).width();
-      const canvas = ui.canvas(width, Math.round(width / 3));
+      const canvas = ui.canvas(width, Math.round(width / 2));
       let smiles = sequenceToSmiles(inputSequenceField.value.replace(/\s/g, ''));
-      OCL.StructureView.drawMolecule(canvas, OCL.Molecule.fromSmiles(smiles), {suppressChiralText: true});
+      // @ts-ignore
+      OCL.StructureView.drawMolecule(canvas, OCL.Molecule.fromSmiles(smiles), { suppressChiralText: true });
       if (outputSequenceObj.type != undefinedInputSequence)
         moleculeSvgDiv.append(canvas);
     } finally {
@@ -216,7 +229,10 @@ export function sequenceTranslator() {
   let inputSequenceField = ui.textInput("", defaultInput, (sequence: string) => updateTableAndMolecule(sequence));
   updateTableAndMolecule(defaultInput);
 
-  let tablesWithCodes = ui.divV([]);
+  let tablesWithCodes = ui.divV([
+    DG.HtmlTable.create(Object.keys(MODIFICATIONS), (item: string) => [item], ['Overhang modification']).root,
+    ui.div([], {style: {height: '30px'}})
+  ]);
   for (let synthesizer of Object.keys(map)) {
     for (let technology of Object.keys(map[synthesizer])) {
       let tableRows = [];
@@ -233,7 +249,11 @@ export function sequenceTranslator() {
     }
   }
   let showCodesButton = ui.button('SHOW CODES', () => ui.dialog('Codes').add(tablesWithCodes).show());
-
+  let copySmiles = ui.button(
+    'COPY SMILES',
+    () => navigator.clipboard.writeText(sequenceToSmiles(inputSequenceField.value.replace(/\s/g, '')))
+      .then(() => grok.shell.info(sequenceWasCopied))
+  );
   let saveMolFileButton = ui.bigButton('SAVE MOL FILE', () => {
     let smiles = sequenceToSmiles(inputSequenceField.value.replace(/\s/g, ''));
     let result = `${OCL.Molecule.fromSmiles(smiles).toMolfile()}\n`;
@@ -270,7 +290,7 @@ export function sequenceTranslator() {
             outputTableDiv
           ]),
           moleculeSvgDiv,
-          ui.divH([saveMolFileButton, showCodesButton])
+          ui.divH([saveMolFileButton, showCodesButton, copySmiles])
         ], 'sequence')
       ]),
       'AXOLABS': defineAxolabsPattern()
@@ -291,9 +311,26 @@ export function sequenceTranslator() {
     .css('width','100%');
 }
 
-function convertSequence(seq: string) {
-  seq = seq.replace(/\s/g, '');
-  let output = isValid(seq);
+function getRangeIndices(text: string) {
+  let start = 0, end = text.length;
+  for (let i = 0; i < text.length; i++)
+    if (text[i] == ')') {
+      start = (i + 1 == text.length) ? 0 : i + 1;
+      break;
+    }
+  for (let i = start; i < text.length; i++)
+    if (text[i] == '(') {
+      end = (i == 0) ? text.length : i;
+      break;
+    }
+  return [start, end];
+}
+
+function convertSequence(text: string) {
+  text = text.replace(/\s/g, '');
+  let indices = getRangeIndices(text);
+  let seq = text.slice(indices[0], indices[1]);
+  let output = isValidSequence(seq);
   if (output.indexOfFirstNotValidCharacter != -1)
     return {
       indexOfFirstNotValidCharacter: JSON.stringify(output),

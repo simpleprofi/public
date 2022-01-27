@@ -1,6 +1,62 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-01-26 Dev build 0.119.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.119.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* CI: Vulnerability scan 
+
+
+# 2022-01-26 Dev build 0.118.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.118.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Chem: Fixing package tests, continued 
+* Wiki: cheminformatics help enhancement iteration 1 
+* Embedding viewer should embed Guest User session 
+* Wiki: Chemonformatics fixes 
+* Chem: Fixing package tests; process exceptions 
+* CI: Vulnerability scan 
+
+
+# 2022-01-26 Dev build 0.117.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.117.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* NPM repositories: new package manager UI 
+* JS API: Projects API (WIP)
+* Updated public token 
+* Remove redundant deployDataPath 
+* Peptides #275: Patch peptide space detached on point click bug. 
+* Enabled Chem | Descriptors 
+* Add peptide difference cell renderer 
+
+
 # 2022-01-25 Dev build 0.116.0
 
 ## Latest Docker Images
