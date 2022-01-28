@@ -1,7 +1,7 @@
 import {VIEW_TYPE, VIEWER, ViewerType} from '../const';
 import {DataFrame} from '../dataframe.js';
 import * as ui from '../../ui';
-import {ScatterPlotViewer, Viewer} from '../viewer';
+import {FilterGroup, ScatterPlotViewer, Viewer} from '../viewer';
 import {DockManager, DockNode} from '../docking';
 import {Grid} from '../grid';
 import {Menu, ToolboxPage} from '../widgets';
@@ -102,21 +102,11 @@ export class ViewBase {
     api.grok_View_Set_ParentView(this.dart, toDart(s));
   }
 
-  /** @type {string} */
-  get description(): string {
-    return '';
-  }
+  get description(): string { return ''; }
+  set description(s: string) { }
 
-  set description(s: string) {
-  }
-
-  /** @type {Object} */
-  get entity(): object | null {
-    return null;
-  }
-
-  set entity(e: object | null) {
-  }
+  get entity(): object | null { return null; }
+  set entity(e: object | null) { }
 
   /** View toolbox.
    *  Sample: {@link https://public.datagrok.ai/js/samples/ui/views/toolbox} */
@@ -390,28 +380,19 @@ export class TableView extends View {
     return toJs(api.grok_TableView(table.dart, addToWorkspace));
   }
 
-  /** Associated table, if it exists (for TableView), or null.
-   *  @type {DataFrame} */
-  get table(): DataFrame | null {
-    return toJs(api.grok_View_Get_Table(this.dart));
-  }
+  /** Associated table, if it exists (for TableView), or null. */
+  get table(): DataFrame | null { return toJs(api.grok_View_Get_Table(this.dart)); }
 
-  /** @type {Grid} */
-  get grid(): Grid {
-    return toJs(api.grok_View_Get_Grid(this.dart));
-  }
+  /** Associated grid (spreadsheet). */
+  get grid(): Grid { return toJs(api.grok_View_Get_Grid(this.dart)); }
 
-  /** @type {DataFrame} */
-  get dataFrame(): DataFrame {
-    return toJs(api.grok_View_Get_DataFrame(this.dart));
-  }
+  /** Returns existing, or creates a new filter group. */
+  get filtersGroup(): FilterGroup { return toJs(api.grok_TableView_GetFilters(this.dart, true)); }
 
-  set dataFrame(x: DataFrame) {
-    api.grok_View_Set_DataFrame(this.dart, x.dart);
-  }
+  get dataFrame(): DataFrame { return toJs(api.grok_View_Get_DataFrame(this.dart)); }
+  set dataFrame(x: DataFrame) { api.grok_View_Set_DataFrame(this.dart, x.dart); }
 
-  /** View toolbox that gets shown on the left, in the sidebar.
-   *  @type {ToolboxPage} */
+  /** View toolbox that gets shown on the left, in the sidebar */
   get toolboxPage(): ToolboxPage {
     return new ToolboxPage(api.grok_View_Get_ToolboxPage(this.dart));
   }
