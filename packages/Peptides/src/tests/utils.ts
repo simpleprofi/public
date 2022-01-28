@@ -27,10 +27,7 @@ export async function _testViewerIsDrawing(table: DG.DataFrame, alignedSequenceC
   let noException = true;
 
   try {
-    await PeptideSimilaritySpaceViewer.create(
-      table,
-      {alignedSequencesColumn: alignedSequenceColumn},
-    );
+    await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: alignedSequenceColumn});
   } catch (error) {
     noException = false;
   }
@@ -105,7 +102,7 @@ export async function _testPeptideSpaceData(
   noException = true;
 
   try {
-    const axes = data!.axesNames.map((v) => df.getCol(v).getRawData() as Float32Array);
+    const axes = PeptideSpaceData.axesNames.map((v) => df.getCol(v).getRawData() as Float32Array);
 
     for (const ax of axes)
       expect(ax.every((v) => v !== null && v !== NaN), true);

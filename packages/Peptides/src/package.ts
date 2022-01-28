@@ -190,8 +190,17 @@ export function manualAlignment(monomer: string) {
 //input: column col {semType: alignedSequence}
 //output: widget result
 export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
-  const widget = await PeptideSimilaritySpaceViewer.create(col.dataFrame, {alignedSequencesColumn: col});
+  const widget = await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: col});
   return new DG.Widget(widget.root);
+}
+
+//name: peptide-space-viewer
+//description: Peptide Space Viewer
+//tags: viewer
+//input: column col {semType: alignedSequence}
+//output: viewer result
+export async function peptideSpace(col: DG.Column): Promise<PeptideSimilaritySpaceViewer> {
+  return await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: col});
 }
 
 //name: Molfile

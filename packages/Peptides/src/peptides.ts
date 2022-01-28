@@ -69,28 +69,15 @@ export class Peptides {
     const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
     sarViewerVertical.helpUrl = helpUrl;
     const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
-    const peptideSpaceViewer = await PeptideSimilaritySpaceViewer.create(
-      currentDf,
-      {
-        alignedSequencesColumn: col,
-        activityColumnName: `${options['activityColumnChoice']}Scaled`,
-      },
-    );
-
-    /*const peptideSpaceViewer = await createPeptideSimilaritySpaceViewer(
-      currentDf,
-      col,
-      't-SNE',
-      'Levenshtein',
-      100,
-      view,
-      `${options['activityColumnChoice']}Scaled`,
-    );*/
-
+    const pspaceOptions = {
+      alignedSequencesColumn: col,
+      activityColumnName: `${options['activityColumnName']}Scaled`,
+    };
+    //const peptideSpaceViewer = DG.Viewer.fromType('peptide-space-viewer', currentDf);
+    const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
+    //peptideSpaceViewer.helpUrl = helpUrl;
     const psNode = view.dockManager.dock(peptideSpaceViewer, DG.DOCK_TYPE.LEFT, sarNode, 'Peptide Space Viewer', 0.3);
-
     //const layout2 = view.saveLayout();
-
     const nodeList = [sarNode, sarVNode, psNode];
 
     const StackedBarchartProm = currentDf.plot.fromType('StackedBarChartAA');
@@ -149,19 +136,17 @@ export class Peptides {
         const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
         sarViewerVertical.helpUrl = helpUrl;
         const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
+        //const peptideSpaceViewer = DG.Viewer.fromType('peptide-space-viewer', currentDf);
+        const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
+        //peptideSpaceViewer.helpUrl = helpUrl;
 
-        const peptideSpaceViewer = await PeptideSimilaritySpaceViewer.create(
-          currentDf,
-          {
-            alignedSequencesColumn: col,
-            activityColumnName: `${options['activityColumnChoice']}Scaled`,
-          },
-        );
-
-        /*const peptideSpaceViewer = await createPeptideSimilaritySpaceViewer(
-          currentDf, col, 't-SNE', 'Levenshtein', 100, view, `${options['activityColumnChoice']}Scaled`);*/
         const psNode = view.dockManager.dock(
-          peptideSpaceViewer, DG.DOCK_TYPE.LEFT, sarNode, 'Peptide Space Viewer', 0.3);
+          peptideSpaceViewer,
+          DG.DOCK_TYPE.LEFT,
+          sarNode,
+          'Peptide Space Viewer',
+          0.3,
+        );
 
         nodeList.push(sarNode);
         nodeList.push(sarVNode);

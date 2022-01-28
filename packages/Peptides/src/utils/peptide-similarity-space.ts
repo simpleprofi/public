@@ -3,6 +3,7 @@ import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 import {_toJson} from 'datagrok-api/src/utils';
+import {Subject} from 'rxjs';
 
 import {getSequenceMolecularWeight} from './molecular-measure';
 import {AlignedSequenceEncoder} from '@datagrok-libraries/bio/src/sequence-encoder';
@@ -51,9 +52,9 @@ interface PeptideSpaceDataOptions {
 
 /** Performs computations for dimensionality reducing tasks. */
 export class PeptideSpaceData {
-  public axesNames = ['~X', '~Y', '~MW'];
-  protected availableMethods = DimensionalityReducer.availableMethods;
-  protected availableMetrics = Measure.getMetricByDataType('String');
+  static axesNames = ['~X', '~Y', '~MW'];
+  static availableMethods = DimensionalityReducer.availableMethods;
+  static availableMetrics = Measure.getMetricByDataType('String');
   protected table: DG.DataFrame;
   protected alignedSequencesColumn: DG.Column;
   protected activityColumnName?: string;
@@ -70,8 +71,8 @@ export class PeptideSpaceData {
     this.table = options.alignedSequencesColumn.dataFrame;
     this.alignedSequencesColumn = options.alignedSequencesColumn;
     this.activityColumnName = options.activityColumnName ?? inferActivityColumnsName(this.table);
-    this.method = options.method ?? this.availableMethods[0];
-    this.metrics = options.metrics ?? this.availableMetrics[0];
+    this.method = options.method ?? PeptideSpaceData.availableMethods[0];
+    this.metrics = options.metrics ?? PeptideSpaceData.availableMetrics[0];
     this.cycles = options.cycles ?? 100;
     this.reset();
   }
@@ -88,7 +89,7 @@ export class PeptideSpaceData {
     );
     const columns = Array.from(
         embcols as Coordinates,
-        (v: Float32Array, k) => (DG.Column.fromFloat32Array(this.axesNames[k], v)),
+        (v: Float32Array, k) => (DG.Column.fromFloat32Array(PeptideSpaceData.axesNames[k], v)),
     );
     return columns;
   }
@@ -130,7 +131,7 @@ export class PeptideSpaceData {
   async init(force: boolean = false) {
     if (!this.initialized || this.needUpdate || force) {
       const originalColumnNames = (this.table.columns as DG.ColumnList).names();
-      const [xAxisName, yAxisName, mwAxisName] = this.axesNames;
+      const [xAxisName, yAxisName, mwAxisName] = PeptideSpaceData.axesNames;
       const coordAxesExist = [xAxisName, yAxisName].every((v) => originalColumnNames.includes(v));
       const mwAxisExists = originalColumnNames.includes(mwAxisName);
       let sequences: string[] = [];
@@ -147,7 +148,7 @@ export class PeptideSpaceData {
 
         columns.push(
           DG.Column.fromFloat32Array(
-            this.axesNames[columns.length],
+            PeptideSpaceData.axesNames[columns.length],
             this._addMolweight(sequences),
           ),
         );
@@ -164,7 +165,8 @@ export class PeptideSpaceData {
    */
   protected _clearColumns(update: boolean = false) {
     const columns = (this.table.columns as DG.ColumnList);
-    const toConsider = update ? this.axesNames.slice(0, this.axesNames.length - 1) : this.axesNames;
+    const axesNames = PeptideSpaceData.axesNames;
+    const toConsider = update ? axesNames.slice(0, -1) : axesNames;
 
     for (const name of toConsider) {
       if (name in columns.names)
@@ -185,16 +187,6 @@ export class PeptideSpaceData {
   protected _markUpdate() {
     this._clearColumns(true);
     this.needUpdate = true;
-  }
-
-  /** Returns known reducing methods. */
-  get methods() {
-    return this.availableMethods;
-  }
-
-  /** Returns known distance metrics. */
-  get metrices() {
-    return this.availableMetrics;
   }
 
   /** Returns current reducing method. */
@@ -244,22 +236,23 @@ export class PeptideSpaceData {
   /** Returns options to control scatter plot visualization. */
   get plotOptions() {
     return {
-      x: this.axesNames[0],
-      y: this.axesNames[1],
-      color: this.activityColumnName ?? this.axesNames[2],
-      size: this.axesNames[2],
+      x: PeptideSpaceData.axesNames[0],
+      y: PeptideSpaceData.axesNames[1],
+      color: this.activityColumnName ?? PeptideSpaceData.axesNames[2],
+      size: PeptideSpaceData.axesNames[2],
     };
   }
 }
 
 /** Scatter plot which can interactively calculate and show dimensionality reduced peptide space. */
-export class PeptideSimilaritySpaceViewer extends DG.ScatterPlotViewer {
+export class PeptideSimilaritySpaceViewerOld extends DG.ScatterPlotViewer {
   protected _data: PeptideSpaceData;
   protected _inputs: HTMLElement;
   protected _type = 'peptide-similarity-space';
   protected _method: string;
   protected _metrics: string;
   protected _cycles: string;
+  onChanged: Subject<any> = new Subject<any>();
 
   /** Creates an instance of PeptideSimilaritySpaceViewer.
    * @param {*} dart An object to integrate.
@@ -270,33 +263,53 @@ export class PeptideSimilaritySpaceViewer extends DG.ScatterPlotViewer {
     this._data = new PeptideSpaceData(options);
     this._inputs = this._drawInputs();
     //this._addDetachedPatch();
+    console.log(this.getOptions(false));
+    console.log(this.getProperties());
     this._method = this.addProperty(
       'Embedding method',
-      'string',
-      this._data.methods[0],
-      {choices: this._data.methods} as {},
+      DG.TYPE.STRING,
+      PeptideSpaceData.availableMethods[0],
+      {choices: PeptideSpaceData.availableMethods} as {},
     );
     this._metrics = this.addProperty(
       'Distance metrics',
-      'string',
-      this._data.metrices[0],
-      {choices: this._data.metrices} as {},
+      DG.TYPE.STRING,
+      PeptideSpaceData.availableMetrics[0],
+      {choices: PeptideSpaceData.availableMetrics} as {},
     );
-    this._cycles = this.addProperty('Cycles count', 'int', 100);
+    this._cycles = this.addProperty('Cycles count', DG.TYPE.INT, 100);
+    console.log(this.getOptions(false));
+    console.log(this.getProperties());
+    this.apply(this.getProperties());
+    //this.getProperty
+  }
+
+  /** Gets property by name (case-sensitive).
+   * @param {string} name
+   * @return {DG.Property} */
+  getProperty(name: string): DG.Property | undefined {
+    return this.getProperties().find((p) => p.name === name);
+  }
+
+  getProperties(): DG.Property[] {
+    return this._properties;
   }
 
   /** Creates the viewer.
    * @param {DG.DataFrame} t Data frame to use.
-   * @param {PeptideSpaceDataOptions} opts Options controlling reducer calculations.
+   * @param {PeptideSpaceDataOptions} dataOptions Options controlling reducer calculations.
    * @param {(object | null)} [options] Options for scatter plot.
    * @return {Promise<PeptideSimilaritySpaceViewer>} Viewer instance.
    */
   static async create(
     t: DG.DataFrame,
-    opts: PeptideSpaceDataOptions,
+    dataOptions: PeptideSpaceDataOptions,
     options?: object | null,
-  ): Promise<PeptideSimilaritySpaceViewer> {
-    const plot = new PeptideSimilaritySpaceViewer(api.grok_Viewer_ScatterPlot(t.dart, _toJson(options)), opts);
+  ): Promise<PeptideSimilaritySpaceViewerOld> {
+    const plot = new PeptideSimilaritySpaceViewerOld(
+      api.grok_Viewer_ScatterPlot(t.dart, _toJson(options)),
+      dataOptions,
+    );
     await plot.init();
     return plot;
   }
@@ -317,7 +330,7 @@ export class PeptideSimilaritySpaceViewer extends DG.ScatterPlotViewer {
    * @return {HTMLElement} Element with controls included.
    */
   protected _drawInputs(): HTMLElement {
-    const methodsList = ui.choiceInput('Embedding method', this._data.currentMethod, this._data.methods,
+    const methodsList = ui.choiceInput('Embedding method', this._data.currentMethod, PeptideSpaceData.availableMethods,
       async (currentMethod: string) => {
         this._data.currentMethod = currentMethod;
         await this._redraw();
@@ -325,7 +338,7 @@ export class PeptideSimilaritySpaceViewer extends DG.ScatterPlotViewer {
     );
     methodsList.setTooltip('Embedding method to apply to the dataset.');
 
-    const metricsList = ui.choiceInput('Distance metric', this._data.currentMetrics, this._data.metrices,
+    const metricsList = ui.choiceInput('Distance metric', this._data.currentMetrics, PeptideSpaceData.availableMetrics,
       async (currentMetrics: string) => {
         this._data.currentMetrics = currentMetrics;
         await this._redraw();
@@ -402,5 +415,131 @@ export class PeptideSimilaritySpaceViewer extends DG.ScatterPlotViewer {
       this._data.currentCycles = value;
 
     await this._redraw();
+  }
+}
+
+export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
+  protected _inputs: HTMLElement | undefined;
+  protected _data: PeptideSpaceData | undefined;
+  protected _viewer: DG.ScatterPlotViewer | undefined;
+  protected _method: string;
+  protected _metrics: string;
+  protected _cycles: number;
+
+  /** Creates an instance of PeptideSimilaritySpaceViewer. */
+  constructor() {
+    super();
+    //console.log(['getOptions', this.getOptions()]);
+
+    console.log(this.getProperties());
+    this._method = this.addProperty(
+      'Embedding method',
+      DG.TYPE.STRING,
+      PeptideSpaceData.availableMethods[0],
+        {choices: PeptideSpaceData.availableMethods} as {},
+    );
+    this._metrics = this.addProperty(
+      'Distance metrics',
+      DG.TYPE.STRING,
+      PeptideSpaceData.availableMetrics[0],
+        {choices: PeptideSpaceData.availableMetrics} as {},
+    );
+    this._cycles = this.addProperty('Cycles count', DG.TYPE.INT, 100);
+    console.log(this.getProperties());
+  }
+
+  /** Initializes the viewer.
+  * @param {PeptideSpaceDataOptions} options Options for reducer calculations.
+  */
+  async init(options: PeptideSpaceDataOptions): Promise<PeptideSimilaritySpaceViewer> {
+    this._data = new PeptideSpaceData(options);
+    this._viewer = DG.Viewer.scatterPlot(this._data.currentTable);
+    this._inputs = this._drawInputs();
+    await this._redraw();
+    this._viewer.setOptions(this._data.plotOptions);
+    return this;
+  }
+
+  /** Make the viewer redraw. */
+  protected async _redraw() {
+    await this._data?.init();
+    this._viewer?.dataFrame?.fireValuesChanged();
+  }
+
+  /** Gets called when a table is attached to the viewer. */
+  async onTableAttached() {
+    const sourceGrid: DG.Grid = this.view.grid;
+    const dataFrame = sourceGrid.dataFrame;//?.setTag('dataType', 'peptides');
+    this._viewer?.onFrameAttached(dataFrame!);
+    await this._redraw();
+  }
+
+  /** Adds UI controls to change the behaviour of the viewer.
+   * @return {HTMLElement} Element with controls included.
+   */
+  protected _drawInputs(): HTMLElement {
+    const methodsList = ui.choiceInput('Embedding method', this._data?.currentMethod, PeptideSpaceData.availableMethods,
+      async (currentMethod: string) => {
+        this._data!.currentMethod = currentMethod;
+        await this._redraw();
+      },
+    );
+    methodsList.setTooltip('Embedding method to apply to the dataset.');
+
+    const metricsList = ui.choiceInput('Distance metric', this._data?.currentMetrics, PeptideSpaceData.availableMetrics,
+      async (currentMetrics: string) => {
+        this._data!.currentMetrics = currentMetrics;
+        await this._redraw();
+      },
+    );
+    metricsList.setTooltip('Custom distance metric to pass to the embedding procedure.');
+
+    const cyclesSlider = ui.intInput('Cycles count', this._data!.currentCycles,
+      async (currentCycles: number) => {
+        this._data!.currentCycles = currentCycles;
+        await this._redraw();
+      },
+    );
+    cyclesSlider.setTooltip('Number of cycles affects the embedding quality.');
+    return ui.inputs([methodsList, metricsList, cyclesSlider]);
+  }
+
+  /** Visual root.
+   * @type {HTMLElement} */
+  get root(): HTMLElement {
+    this._viewer!.root.style.width = 'auto';
+    return ui.divV([this._viewer?.root, this._inputs]);
+  }
+
+  /** Gets called when viewer's property is changed.
+   * @param {Property} property - or null, if multiple properties were changed. */
+  async onPropertyChanged(property: DG.Property | null): Promise<void> {
+    super.onPropertyChanged(property);
+    console.log(['onPropertyChanged', property]);
+
+    if (!property)
+      return;
+
+    const value = property.get(this);
+
+    if (property.name === 'Embedding method')
+      this._data!.currentMethod = value;
+    else if (property.name === 'Distance metrics')
+      this._data!.currentMetrics = value;
+    else if (property.name === 'Cycles count')
+      this._data!.currentCycles = value;
+
+    await this._redraw();
+  }
+
+  get viewer(): DG.ScatterPlotViewer {
+    return this._viewer!;
+  }
+
+  /** Subscribes on detach event to clone this into the TableView. */
+  protected _addDetachedPatch() {
+    this.onEvent('d4-viewer-detached').subscribe((args) => {
+      this._data?.reset();
+    });
   }
 }
