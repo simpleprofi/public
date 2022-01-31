@@ -27,7 +27,6 @@ export class Peptides {
    * @param {DG.DataFrame} currentDf Working table.
    * @param {StringDictionary} options SAR viewer options
    * @param {DG.Column} col Aligned sequences column.
-   * @param {string} activityColumnChoice Activity column name.
    * @memberof Peptides
    */
   async init(
@@ -53,7 +52,7 @@ export class Peptides {
     const originalDfName = currentDf.name;
 
     // const substViewer = view.addViewer(
-    //   'substitution-analysis-viewer', {'activityColumnName': options['activityColumnName']},
+    //   'substitution-analysis-viewer', {'activityColumnName': `${options['activityColumnName']}Scaled`},
     // );
     // const substNode = view.dockManager.dock(substViewer, DG.DOCK_TYPE.RIGHT, null, 'Substitution Analysis');
 
@@ -158,7 +157,7 @@ export class Peptides {
         $(switchViewers).addClass('fa-toggle-on');
       } else {
         const substViewer = view.addViewer(
-          'substitution-analysis-viewer', {'activityColumnName': options['activityColumnName']},
+          'substitution-analysis-viewer', {'activityColumnName': `${options['activityColumnName']}Scaled`},
         );
         substViewer.helpUrl = helpUrl;
         nodeList.push(view.dockManager.dock(substViewer, DG.DOCK_TYPE.DOWN, null, 'Substitution Analysis'));
