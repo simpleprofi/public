@@ -73,9 +73,9 @@ export class Peptides {
       alignedSequencesColumn: col,
       activityColumnName: `${options['activityColumnName']}Scaled`,
     };
-    //const peptideSpaceViewer = DG.Viewer.fromType('peptide-space-viewer', currentDf);
-    const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
-    //peptideSpaceViewer.helpUrl = helpUrl;
+    const peptideSpaceViewer = view.addViewer('peptide-space-viewer'/*, pspaceOptions*/);
+    //await ((peptideSpaceViewer as PeptideSimilaritySpaceViewer).init(pspaceOptions));
+    //const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
     const psNode = view.dockManager.dock(peptideSpaceViewer, DG.DOCK_TYPE.LEFT, sarNode, 'Peptide Space Viewer', 0.3);
     //const layout2 = view.saveLayout();
     const nodeList = [sarNode, sarVNode, psNode];
@@ -137,7 +137,9 @@ export class Peptides {
         sarViewerVertical.helpUrl = helpUrl;
         const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
         //const peptideSpaceViewer = DG.Viewer.fromType('peptide-space-viewer', currentDf);
-        const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
+        const peptideSpaceViewer = view.addViewer('peptide-space-viewer');
+        await (peptideSpaceViewer as PeptideSimilaritySpaceViewer).init(pspaceOptions);
+        //const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
         //peptideSpaceViewer.helpUrl = helpUrl;
 
         const psNode = view.dockManager.dock(
