@@ -49,31 +49,47 @@ export abstract class FormulaLinesHelper {
     return json ? JSON.parse(json) : [];
   }
 
-  set items(value: FormulaLine[]) { this.storage = JSON.stringify(value); }
+  set items(value: FormulaLine[]) {
+    this.storage = JSON.stringify(value);
+  }
 
-  add(item: FormulaLine): void {
-    let newItem = this.addDefaults(item);
+  add(item: FormulaLine) {
+    let newItem = this.setDefaults(item);
     this.items = this.items.concat(newItem);
   }
 
-  addAll(items: FormulaLine[]): void {
-    let newItems = items.map((item) => { return this.addDefaults(item); });
+  addAll(items: FormulaLine[]) {
+    let newItems = items.map((item) => { return this.setDefaults(item); });
     this.items = this.items.concat(newItems);
   }
 
-  addLine(item: FormulaLine): void {
+  addLine(item: FormulaLine) {
     item.type = 'line';
     this.add(item);
   }
 
-  addBand(item: FormulaLine): void {
+  addBand(item: FormulaLine) {
     item.type = 'band';
     this.add(item);
   }
 
-  clear(): void { this.items = []; }
+  updateAt(idx: number, value: FormulaLine) {
+    let newItems = this.items;
+    newItems[idx] = value;
+    this.items = newItems;
+  }
 
-  addDefaults(item: FormulaLine): FormulaLine { return toJs(api.grok_FormulaLineHelper_AddDefaultParams(item)); }
+  removeAt(idx: number, count: number = 1) {
+    this.items = this.items.slice(idx, idx + count - 1);
+  }
+
+  removeWhere(predicate: (value: FormulaLine, index: number, array: FormulaLine[]) => boolean) {
+    this.items = this.items.filter(predicate);
+  }
+
+  clear() { this.items = []; }
+
+  setDefaults(item: FormulaLine): FormulaLine { return toJs(api.grok_FormulaLineHelper_SetDefaultParams(item)); }
 
   getMeta(item: FormulaLine): FormulaLineMeta { return toJs(api.grok_FormulaLineHelper_GetMeta(item)); }
 }
