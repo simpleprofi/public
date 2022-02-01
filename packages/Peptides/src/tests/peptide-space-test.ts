@@ -6,7 +6,7 @@ import {
   _testTableIsNotEmpty,
 } from './utils';
 import {DimensionalityReducer} from '@datagrok-libraries/ml/src/reduce-dimensionality';
-import {cleanAlignedSequencesColumn} from '../utils/peptide-similarity-space';
+import {cleanAlignedSequencesColumn} from '../utils/peptide-space-data';
 import {aligned1} from './test-data';
 
 import * as DG from 'datagrok-api/dg';

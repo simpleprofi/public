@@ -1,6 +1,5 @@
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
-import {PeptideSimilaritySpaceViewer} from './utils/peptide-similarity-space';
 import {addViewerToHeader} from './viewers/stacked-barchart-viewer';
 import {model} from './model';
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
@@ -68,15 +67,15 @@ export class Peptides {
     const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
     sarViewerVertical.helpUrl = helpUrl;
     const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
-    const pspaceOptions = {
-      alignedSequencesColumn: col,
-      activityColumnName: `${options['activityColumnName']}Scaled`,
-    };
-    const peptideSpaceViewer = view.addViewer('peptide-space-viewer'/*, pspaceOptions*/);
-    //await ((peptideSpaceViewer as PeptideSimilaritySpaceViewer).init(pspaceOptions));
-    //const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
-    const psNode = view.dockManager.dock(peptideSpaceViewer, DG.DOCK_TYPE.LEFT, sarNode, 'Peptide Space Viewer', 0.3);
-    //const layout2 = view.saveLayout();
+    const peptideSpaceViewer = view.addViewer('peptide-space-viewer');
+    peptideSpaceViewer.helpUrl = helpUrl;
+    const psNode = view.dockManager.dock(
+      peptideSpaceViewer,
+      DG.DOCK_TYPE.LEFT,
+      sarNode,
+      'Peptide Space Viewer',
+      0.3,
+    );
     const nodeList = [sarNode, sarVNode, psNode];
 
     const StackedBarchartProm = currentDf.plot.fromType('StackedBarChartAA');
@@ -135,12 +134,9 @@ export class Peptides {
         const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
         sarViewerVertical.helpUrl = helpUrl;
         const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
-        //const peptideSpaceViewer = DG.Viewer.fromType('peptide-space-viewer', currentDf);
-        const peptideSpaceViewer = view.addViewer('peptide-space-viewer');
-        await (peptideSpaceViewer as PeptideSimilaritySpaceViewer).init(pspaceOptions);
-        //const peptideSpaceViewer = await (new PeptideSimilaritySpaceViewer()).init(pspaceOptions);
-        //peptideSpaceViewer.helpUrl = helpUrl;
 
+        const peptideSpaceViewer = view.addViewer('peptide-space-viewer');
+        peptideSpaceViewer.helpUrl = helpUrl;
         const psNode = view.dockManager.dock(
           peptideSpaceViewer,
           DG.DOCK_TYPE.LEFT,

@@ -1,7 +1,8 @@
 import * as DG from 'datagrok-api/dg';
 
 import {expect} from '@datagrok-libraries/utils/src/test';
-import {PeptideSpaceData, PeptideSimilaritySpaceViewer} from '../utils/peptide-similarity-space';
+import {PeptideSimilaritySpaceViewer} from '../utils/peptide-similarity-space';
+import {PeptideSpaceData} from '../utils/peptide-space-data';
 import {
   createDimensinalityReducingWorker,
 } from '@datagrok-libraries/ml/src/workers/dimensionality-reducing-worker-creator';

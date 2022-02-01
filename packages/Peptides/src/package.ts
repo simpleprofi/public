@@ -80,6 +80,24 @@ export async function Peptides() {
   ]);
 }
 
+//###tags: autostart
+// export function init() {
+//   grok.shell.registerViewer(
+//     'PeptideSimilaritySpaceViewer',
+//     'Creates peptide similarity space viewer',
+//     () => new PeptideSimilaritySpaceViewer(),
+//   );
+//   grok.events.onContextMenu.subscribe((args) => {
+//     const context = args.args.context;
+//     if (context instanceof PeptideSimilaritySpaceViewer) {
+//       args.args.menu.item('Adjustments', () => {
+//         //context.render();
+//         grok.shell.info(context);
+//       });
+//     }
+//   });
+// }
+
 //name: Peptides
 //tags: panel, widgets
 //input: column col {semType: alignedSequence}
@@ -194,17 +212,13 @@ export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
   return new DG.Widget(widget.root);
 }
 
-// ###input: column col {semType: alignedSequence}
-// export async function peptideSpace(col: DG.Column): Promise<PeptideSimilaritySpaceViewer> {
-//   return await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: col});
-// }
-
 //name: peptide-space-viewer
 //description: Peptide Space Viewer
 //tags: viewer
 //output: viewer result
-export function peptideSpace(): PeptideSimilaritySpaceViewer {
-  return new PeptideSimilaritySpaceViewer();
+export async function peptideSpace(): Promise<PeptideSimilaritySpaceViewer> {
+  const col = (view.dataFrame.columns as DG.ColumnList).bySemType('alignedSequence');
+  return await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: col!});
 }
 
 //name: Molfile
