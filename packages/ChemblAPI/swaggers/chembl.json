@@ -2,10 +2,11 @@
   "swagger": "2.0",
   "info": {
     "title": "Chembl API",
-    "description": ""
+    "description": "",
+    "version": ""
   },
-  "host": "www.ebi.ac.uk/chembl/api/data",
-  "basePath": "",
+  "host": "www.ebi.ac.uk",
+  "basePath": "/chembl/api/data",
   "schemes": [
     "https"
   ],
@@ -279,11 +280,11 @@
         "description": ""
       }
     },
-    "/substructure/{smile}": {
+    "/substructure/{smiles}": {
       "get": {
         "parameters": [
           {
-            "name": "smile",
+            "name": "smiles",
             "in": "path",
             "required": true,
             "type": "string"
@@ -548,11 +549,11 @@
         "description": ""
       }
     },
-    "/similarity/{smile}/{score}": {
+    "/similarity/{smiles}/{score}": {
       "get": {
         "parameters": [
           {
-            "name": "smile",
+            "name": "smiles",
             "in": "path",
             "required": true,
             "type": "string"
