@@ -6,8 +6,8 @@ import '../../css/usage_analysis.css';
 import {UaToolbox} from "../ua-toolbox";
 import {UaView} from "./ua-view";
 import {UaFilter} from "../filter2";
-import {UaFilterableViewer} from "../viewers/ua-filterable-viewer";
-import {UaQueryViewer} from "../viewers/ua-query-viewer";
+import {UaFilterableQueryViewer} from "../viewers/ua-filterable-query-viewer";
+import {UaQueryViewer} from "../viewers/abstract/ua-query-viewer";
 import {TopErrorsViewer} from "../drilldown_viewers/errors/top-errors-viewer";
 import {TopErrorSourcesViewer} from "../drilldown_viewers/errors/top-error-sources-viewer";
 
@@ -18,7 +18,7 @@ export class ErrorsView extends UaView {
   }
 
   async initViewers() : Promise<void> {
-    let errorsViewer = new UaFilterableViewer(
+    let errorsViewer = new UaFilterableQueryViewer(
         this.uaToolbox.filterStream,
         'Errors',
         'Errors1',
@@ -26,15 +26,19 @@ export class ErrorsView extends UaView {
     );
     this.viewers.push(errorsViewer);
 
-    let topErrorsViewer = new TopErrorsViewer(this.uaToolbox.filterStream);
+    let topErrorsViewer = new TopErrorsViewer('Errors', 'TopErrors', this.uaToolbox.filterStream);
     this.viewers.push(topErrorsViewer);
+
+    let topNotErrorsViewer = new TopErrorsViewer('Disabled Errors', 'TopDisabledErrors', this.uaToolbox.filterStream);
+    this.viewers.push(topNotErrorsViewer);
 
     let topErrorSourcesViewer = new TopErrorSourcesViewer(this.uaToolbox.filterStream);
     this.viewers.push(topErrorSourcesViewer);
 
     this.root.append(ui.divV([
-      ui.divH([ui.block([errorsViewer.root])]),
-      ui.divH([ui.block50([topErrorsViewer.root]), ui.block50([topErrorSourcesViewer.root])]),
+      ui.div([ui.block([errorsViewer.root])]),
+      ui.divH([ui.block50([topErrorsViewer.root]), ui.block50([topNotErrorsViewer.root])]),
+      ui.div([ui.block50([topErrorSourcesViewer.root])])
     ]));
 
   }

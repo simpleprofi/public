@@ -71,7 +71,7 @@ export function getUniqueValues(df: DG.DataFrame, colName: string) {
 
 export function addDataFromDmDomain(df: DG.DataFrame, dm: DG.DataFrame, columnsToExtract: string[], columnsToExtractFromDm: string[], subjIdColName = SUBJECT_ID) {
     let withArm = grok.data.joinTables(df, dm, [ subjIdColName ], [ SUBJECT_ID ], columnsToExtract, columnsToExtractFromDm, DG.JOIN_TYPE.LEFT, false);
-    columnsToExtractFromDm.forEach(it => changeEmptyStringsToUnknown(withArm, it));
+   // columnsToExtractFromDm.forEach(it => changeEmptyStringsToUnknown(withArm, it));
     return withArm;
 }
 
@@ -114,19 +114,22 @@ export function getVisitNamesAndDays(df: DG.DataFrame, allowNulls = false) {
     const visitsArray = [];
     let rowCount = data.rowCount;
     for (let i = 0; i < rowCount; i++) {
+        const day = data.getCol(VISIT_DAY).isNone(i) ? null : data.get(VISIT_DAY, i);
+        const name = data.getCol(VISIT_NAME).isNone(i) ? null : data.get(VISIT_NAME, i);
         if (allowNulls) {
-            visitsArray.push({ 
-                day: data.getCol(VISIT_DAY).isNone(i) ? null : data.get(VISIT_DAY, i), 
-                name: data.getCol(VISIT_NAME).isNone(i) ? null : data.get(VISIT_NAME, i) });
+            if (!visitsArray.filter(it => it.day === day && it.name === name).length) {
+                visitsArray.push({day: day, name: name})
+            };
+
         } else {
-            if (!data.getCol(VISIT_DAY).isNone(i) && !data.getCol(VISIT_NAME).isNone(i)) {
-                visitsArray.push({ day: data.get(VISIT_DAY, i), name: data.get(VISIT_NAME, i) });
+            if (day && name) {
+                visitsArray.push({ day: day, name: name });
             }
         }
 
     }
     //@ts-ignore
-    return visitsArray.sort((a, b) => {return (b.day !== null) - (a.day !== null) || a.day - b.day;});
+    return visitsArray.sort((a, b) => { return (b.day !== null) - (a.day !== null) || a.day - b.day; });
 }
 
 
@@ -134,6 +137,31 @@ export function getVisitNamesAndDays(df: DG.DataFrame, allowNulls = false) {
     return df
         .groupBy(groupByCols.concat(splitBy))
         .pivot(pivotCol)
+        .first(aggregatedColName)
+        .aggregate();
+}
+
+export function createPivotedDataframeAvg(df: DG.DataFrame, groupByCols: string[], pivotCol: string, aggregatedColName: string, splitBy: string[]) {
+    return df
+        .groupBy(groupByCols.concat(splitBy))
+        .pivot(pivotCol)
         .avg(aggregatedColName)
         .aggregate();
+}
+
+export function checkDateFormat(colToCheck: DG.Column, rowCount: number) {
+    const rowsWithIncorrectDates = [];
+    for (let i = 0; i < rowCount; i++) {
+        if (!colToCheck.isNone(i) && isNaN(Date.parse(colToCheck.get(i))))
+            rowsWithIncorrectDates.push(i);
+    }
+    return rowsWithIncorrectDates;
+}
+
+export function convertColToString(df: DG.DataFrame, col: string) {
+    if (df.col(col).type !== 'string') {
+        df.columns.addNewString(`${col}_s`).init((i) => df.get(col, i).toString())
+        df.columns.remove(col);
+        df.col(`${col}_s`).name = col;
+    }
 }

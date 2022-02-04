@@ -5,11 +5,11 @@ import {Options, DistanceMetric, Coordinates, Vector, Vectors} from '@datagrok-l
 import {
   calcDistanceMatrix,
   transposeMatrix,
-  calculateEuclideanDistance,
   assert,
 } from '@datagrok-libraries/utils/src/operations';
-import {SPEBase, PSPEBase} from './spe';
-import {StringMeasure, AvailableMetrics, KnownMetrics} from './string-measure';
+import {SPEBase, PSPEBase, OriginalSPE} from './spe';
+import {Measure, KnownMetrics, AvailableMetrics, isBitArrayMetric, AvailableDataTypes} from './typed-metrics';
+import BitArray from '@datagrok-libraries/utils/src/bit-array';
 
 /**
  * Abstract dimensionality reducer.
@@ -201,11 +201,40 @@ class PSPEReducer extends Reducer {
   }
 }
 
+/**
+ * Implements original SPE dimensionality reduction.
+ *
+ * @class OriginalSPEReducer
+ * @extends {Reducer}
+ */
+class OriginalSPEReducer extends Reducer {
+  protected reducer: OriginalSPE;
+
+  /**
+   * Creates an instance of OriginalSPEReducer.
+   * @param {Options} options Options to pass to the constructor.
+   * @memberof OriginalSPEReducer
+   */
+  constructor(options: Options) {
+    super(options);
+    this.reducer = new OriginalSPE(options);
+  }
+
+  /**
+   * Embeds the data given into the two-dimensional space using the original SPE method.
+   * @return {Coordinates} Cartesian coordinate of this embedding.
+   */
+  public transform(): Coordinates {
+    return this.reducer.embed(this.data);
+  }
+}
+
 const AvailableReducers = {
   'UMAP': UMAPReducer,
   't-SNE': TSNEReducer,
   'SPE': SPEReducer,
   'pSPE': PSPEReducer,
+  'OriginalSPE': OriginalSPEReducer,
 };
 
 export type KnownMethods = keyof typeof AvailableReducers;
@@ -223,13 +252,19 @@ export class DimensionalityReducer {
    * Creates an instance of DimensionalityReducer.
    * @param {any[]} data Vectors to embed.
    * @param {KnownMethods} method Embedding method to be applied
-   * @param {KnownMetrics?} metric Distance metric to be computed between each of the vectors.
+   * @param {KnownMetrics} metric Distance metric to be computed between each of the vectors.
    * @param {Options} [options] Options to pass to the implementing embedders.
    * @memberof DimensionalityReducer
    */
-  constructor(data: any[], method: KnownMethods, metric?: KnownMetrics, options?: Options) {
-    const measure = metric ? new StringMeasure(metric).getMeasure() : calculateEuclideanDistance;
+  constructor(data: any[], method: KnownMethods, metric: KnownMetrics, options?: Options) {
+    const measure = new Measure(metric).getMeasure();
     let specOptions = {};
+
+    if (isBitArrayMetric(metric)) {
+      for (let i = 0; i < data.length; ++i) {
+        data[i] = new BitArray(data[i]._data, data[i]._length);
+      }
+    }
 
     if (method == 'UMAP') {
       specOptions = {
@@ -274,6 +309,17 @@ export class DimensionalityReducer {
   }
 
   /**
+   * Returns metrics available by type.
+   *
+   * @param {AvailableDataTypes} typeName type name
+   * @return {string[]} Metric names which expects the given data type
+   * @memberof DimensionalityReducer
+   */
+  static availableMetricsByType(typeName: AvailableDataTypes) {
+    return Object.keys(AvailableMetrics[typeName]);
+  }
+
+  /**
    * Returns dimensionality reduction methods available.
    *
    * @readonly
@@ -290,6 +336,11 @@ export class DimensionalityReducer {
    * @memberof DimensionalityReducer
    */
   static get availableMetrics() {
-    return Object.keys(AvailableMetrics);
+    let ans: string[] = [];
+    Object.values(AvailableMetrics).forEach((obj) => {
+      const array = Object.values(obj);
+      ans = [...ans, ...array];
+    });
+    return ans;
   }
 }

@@ -1,7 +1,7 @@
 import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
-import {getRdKitModule} from '../chem-common-rdkit';
+import {getRdKitModule} from '../utils/chem-common-rdkit';
 import {_package} from '../package';
 
 class UniChemSource {
@@ -69,7 +69,7 @@ class UniChemSource {
   }
 
   static async refreshSources() {
-    const table = await grok.data.loadTable(_package.webRoot + 'data-samples/UniChemSources.csv');
+    const table = DG.DataFrame.fromCsv(await _package.files.readAsText('unichem-sources.csv'));
     const rowCount = table.rowCount;
     for (let i = 0; i < rowCount; i++) {
       const id = table.get('src_id', i);

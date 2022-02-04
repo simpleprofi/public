@@ -9,14 +9,14 @@
 	"dependencies": {
 		"@datagrok-libraries/utils": ">=0.0.16",
 		"cash-dom": "latest",
-		"datagrok-api": ">=0.95.8",
+		"datagrok-api": ">=0.117.0",
 		"rxjs": "^6.5.5"
 	},
 	"devDependencies": {
 		"@types/jest": "latest",
 		"datagrok-tools": "latest",
 		"jest": "latest",
-		"puppeteer": "latest",
+		"puppeteer": "^13.1.2",
 		"ts-jest": "latest",
 		"ts-loader": "^9.2.6",
 		"typescript": "^4.4.4",

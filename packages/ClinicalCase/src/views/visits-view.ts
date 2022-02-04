@@ -1,18 +1,17 @@
 import * as grok from 'datagrok-api/grok';
 import * as DG from "datagrok-api/dg";
 import * as ui from "datagrok-api/ui";
-import { study, ClinRow } from "../clinical-study";
-import { ILazyLoading } from '../lazy-loading/lazy-loading';
-import { checkMissingDomains, updateDivInnerHTML } from './utils';
-import { requiredColumnsByView } from '../constants';
-import { createPivotedDataframe, filterNulls, getUniqueValues, getVisitNamesAndDays, addDataFromDmDomain } from '../data-preparation/utils';
-import { AE_START_DAY, CON_MED_START_DAY, INV_DRUG_NAME, LAB_RES_N, SUBJECT_ID, SUBJ_REF_ENDT, TREATMENT_ARM, VISIT_DAY, VISIT_NAME, VISIT_START_DATE, VS_RES_N } from '../columns-constants';
+import { study } from "../clinical-study";
+import { updateDivInnerHTML } from './utils';
+import { createPivotedDataframe, filterNulls, getVisitNamesAndDays, addDataFromDmDomain, dataframeContentToRow } from '../data-preparation/utils';
+import { AE_DECOD_TERM, AE_START_DAY, CON_MED_NAME, CON_MED_START_DAY, INV_DRUG_NAME, LAB_RES_N, LAB_TEST, SUBJECT_ID, TREATMENT_ARM, VISIT_DAY, VISIT_NAME, VISIT_START_DATE, VS_RES_N, VS_TEST } from '../columns-constants';
 import { PatientVisit } from '../model/patient-visit';
 import { StudyVisit } from '../model/study-visit';
-import { createPropertyPanel } from '../panels/panels-service';
 import { _package } from '../package';
+import { ClinicalCaseViewBase } from '../model/ClinicalCaseViewBase';
+import { DockManager } from 'datagrok-api/dg';
 
-export class VisitsView extends DG.ViewBase implements ILazyLoading {
+export class VisitsView extends ClinicalCaseViewBase {
 
     tv: DG.DataFrame;
     sv: DG.DataFrame;
@@ -22,8 +21,8 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
     patientVisit = new PatientVisit(study.domains);
     studyVisit = new StudyVisit(study.domains);
     totalVisits = {};
-    proceduresAtVisit = { 'lb': {column: LAB_RES_N}, 'ex': {column: INV_DRUG_NAME}, 'vs': {column: VS_RES_N} };
-    eventsSinceLastVisit = { 'ae': {column: AE_START_DAY}, 'cm': {column: CON_MED_START_DAY} };
+    proceduresAtVisit = { 'lb': { column: LAB_TEST}, 'ex': { column: INV_DRUG_NAME }, 'vs': { column: VS_TEST } };
+    eventsSinceLastVisit = { 'ae': { column: AE_START_DAY }, 'cm': { column: CON_MED_START_DAY } };
     subjSet = new Set();
     existingDomains: string[];
     selectedDomain: string;
@@ -42,12 +41,6 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         this.helpUrl = `${_package.webRoot}/views_help/visits.md`;
     }
 
-    loaded = false;
-
-    load(): void {
-        checkMissingDomains(requiredColumnsByView[this.name], this);
-    }
-
     createView(): void {
         this.existingDomains = Object.keys(this.proceduresAtVisit)
             .concat(Object.keys(this.eventsSinceLastVisit))
@@ -55,13 +48,13 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         this.assignColorsToDomains();
         this.tv = study.domains.tv.clone();
         this.sv = study.domains.sv.clone();
-        filterNulls(this.sv, VISIT_DAY);
+        filterNulls(this.sv, VISIT_DAY); //remove unshc visits
         this.pivotedSv = createPivotedDataframe(this.sv, [SUBJECT_ID], VISIT_NAME, VISIT_START_DATE, []);
         this.pivotedSv.columns.names().forEach(col => {
-            if (this.pivotedSv.getCol(col).name !== SUBJECT_ID) {
+            if (this.pivotedSv.getCol(col).name !== VISIT_START_DATE) {
                 this.pivotedSv.getCol(col).tags.format = 'yyyy-MM-dd';
             }
-            this.pivotedSv.getCol(col).name = col.replace(` avg(${VISIT_START_DATE})`, '');
+            this.pivotedSv.getCol(col).name = col.replace(` first(${SUBJECT_ID})`, '');
         });
         this.sortedVisitNamesAndDays = getVisitNamesAndDays(this.tv, true);
         this.sortedVisitNames = this.sortedVisitNamesAndDays.map(it => it.name);
@@ -96,8 +89,8 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         this.root.append(this.div);
 
         this.setRibbonPanels(
-            [ [switchGrid.root], [this.ribbonDiv] ] ,
-          );
+            [[switchGrid.root], [this.ribbonDiv]] ,
+        );
     }
 
     private assignColorsToDomains() {
@@ -108,10 +101,10 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         })
     }
 
-    private createSwitchGridInput(){
+    private createSwitchGridInput() {
         let switchGrid = ui.switchInput('Grid', true);
         switchGrid.onChanged((v) => {
-            if(switchGrid.value){
+            if (switchGrid.value) {
                 updateDivInnerHTML(this.div, this.visitsGrid.root);
                 updateDivInnerHTML(this.ribbonDiv, this.gridRibbonDiv);
             } else {
@@ -133,20 +126,20 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         this.heatMapdomainChoices = domainChoices;
     }
 
-    private createGridRibbon(){
+    private createGridRibbon() {
         this.selectedDomains = this.existingDomains;
-        let domainsButton =  ui.button('Domains', ()=>{
+        let domainsButton = ui.button('Domains', () => {
             //@ts-ignore
             let domainsMultiChoices = ui.multiChoiceInput('', this.selectedDomains, this.existingDomains);
             ui.dialog({ title: 'Select domains' })
-              .add(ui.div([ domainsMultiChoices ]))
-              .onOK(() => {
-                this.selectedDomains = domainsMultiChoices.value;
-                updateDivInnerHTML(this.selectedDomainsDiv, this.createSelectedDomainsDiv());
-                this.visitsGrid.invalidate();
-              })
-              //@ts-ignore
-            .show();
+                .add(ui.div([domainsMultiChoices]))
+                .onOK(() => {
+                    this.selectedDomains = domainsMultiChoices.value;
+                    updateDivInnerHTML(this.selectedDomainsDiv, this.createSelectedDomainsDiv());
+                    this.visitsGrid.invalidate();
+                })
+                //@ts-ignore
+                .show();
         });
 
         this.gridRibbonDiv = ui.divH([
@@ -157,7 +150,7 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
     }
 
 
-    private createSelectedDomainsDiv(){
+    private createSelectedDomainsDiv() {
         let selectedDomainsDiv = ui.divH([]);
         this.selectedDomains.forEach((it) => {
             let domainName = ui.divText(`${it} `);
@@ -166,13 +159,13 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
             domainName.style.paddingTop = '10px';
             selectedDomainsDiv.append(domainName);
         });
-       return selectedDomainsDiv;
+        return selectedDomainsDiv;
     }
 
 
     private createHeatMapDf() {
         let df = DG.DataFrame.create();
-        df.columns.addNewString(SUBJECT_ID);
+        typeof(study.domains.dm.get(SUBJECT_ID, 0)) === 'number' ? df.columns.addNewInt(SUBJECT_ID) : df.columns.addNewString(SUBJECT_ID);
         this.pivotedSv.columns.names().forEach(col => {
             if (col !== SUBJECT_ID && col !== TREATMENT_ARM) {
                 df.columns.addNewInt(col);
@@ -186,6 +179,7 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
             })
         });
         df = addDataFromDmDomain(df, study.domains.dm, df.columns.names().filter(it => it !== TREATMENT_ARM), [TREATMENT_ARM]);
+        console.log(df.columns.names())
         df = df.clone(null, [SUBJECT_ID, TREATMENT_ARM].concat(this.sortedVisitNames));
         this.setColorPaletteForHeatMap(df);
         df.onCurrentCellChanged.subscribe(() => {
@@ -198,7 +192,7 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         return df;
     }
 
-    private setColorPaletteForHeatMap(df: DG.DataFrame){
+    private setColorPaletteForHeatMap(df: DG.DataFrame) {
         df.columns.names().forEach(col => {
             if (col !== SUBJECT_ID && col !== TREATMENT_ARM) {
                 df.col(col).tags[DG.TAGS.COLOR_CODING_TYPE] = 'Linear';
@@ -207,16 +201,17 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         });
     }
 
-    private createVisitPropertyPanel(df: DG.DataFrame){
+    private async createVisitPropertyPanel(df: DG.DataFrame) {
         if (df.currentCol.name !== SUBJECT_ID && df.currentCol.name !== TREATMENT_ARM) {
             if (df.currentRowIdx === -1) {
                 let { current: currentVisit, previous: previousVisit } = this.getCurrentAndPreviousVisits(df.currentCol.name);
-                this.studyVisit.createStudyVisitPanel(currentVisit.day, currentVisit.name, previousVisit ? previousVisit.day : null);
+                this.studyVisit.updateStudyVisit(currentVisit.day, currentVisit.name, previousVisit ? previousVisit.day : null);
+                grok.shell.o = await this.studyVisitPanel();
             } else {
                 let subjId = df.get(SUBJECT_ID, df.currentRowIdx);
                 let currentPatientVisit = this.totalVisits[df.currentCol.name][subjId]
                 currentPatientVisit.updateSubjectVisitDomains();
-                createPropertyPanel(currentPatientVisit);
+                grok.shell.o = await this.patientVisitPanel(currentPatientVisit);
             }
         }
 
@@ -239,7 +234,7 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
     private datasetsWithNumberProceduresAtVisit() {
         let countDfs = {};
         Object.keys(this.proceduresAtVisit).forEach(domain => {
-            if (study.domains[domain]) {
+            if (study.domains[domain] && [SUBJECT_ID, VISIT_NAME, this.proceduresAtVisit[domain].column].every(it => study.domains[domain].columns.names().includes(it))) {
                 countDfs[domain] = study.domains[domain]
                     .groupBy([SUBJECT_ID, VISIT_NAME])
                     .count(this.proceduresAtVisit[domain].column)
@@ -282,18 +277,20 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
         Object.keys(this.eventsSinceLastVisit).forEach(domain => {
             if (study.domains[domain]) {
                 for (let i = 0; i < study.domains[domain].rowCount; i++) {
-                    let startDay = study.domains[domain].get(this.eventsSinceLastVisit[domain].column, i);
-                    let subjId = study.domains[domain].get(SUBJECT_ID, i);
-                    this.subjSet.add(subjId);
-                    for (let z = 0; z < this.sortedVisitNamesAndDays.length - 1; z++) {
-                        if (startDay > this.sortedVisitNamesAndDays[z].day && startDay < this.sortedVisitNamesAndDays[z + 1].day) {
-                            let visitName = this.sortedVisitNamesAndDays[z + 1].name;
-                            if (this.totalVisits[visitName][subjId].eventsCount[domain]) {
-                                this.totalVisits[visitName][subjId].eventsCount[domain] += 1;
-                            } else {
-                                this.totalVisits[visitName][subjId].eventsCount[domain] = 1;
+                    if (!study.domains[domain].col(this.eventsSinceLastVisit[domain].column).isNone(i)) {
+                        let startDay = study.domains[domain].get(this.eventsSinceLastVisit[domain].column, i);
+                        let subjId = study.domains[domain].get(SUBJECT_ID, i);
+                        this.subjSet.add(subjId);
+                        for (let z = 0; z < this.sortedVisitNamesAndDays.length - 1; z++) {
+                            if (startDay > this.sortedVisitNamesAndDays[z].day && startDay <= this.sortedVisitNamesAndDays[z + 1].day) {
+                                let visitName = this.sortedVisitNamesAndDays[z + 1].name;
+                                if (this.totalVisits[visitName][subjId].eventsCount[domain]) {
+                                    this.totalVisits[visitName][subjId].eventsCount[domain] += 1;
+                                } else {
+                                    this.totalVisits[visitName][subjId].eventsCount[domain] = 1;
+                                }
+                                break;
                             }
-                            break;
                         }
                     }
                 }
@@ -322,6 +319,147 @@ export class VisitsView extends DG.ViewBase implements ILazyLoading {
                 args.preventDefault();
             }
         })
+
+    }
+
+    async studyVisitPanel() {
+        let panelDiv = ui.div();
+        let acc = this.createAccWithTitle('Study visit panel', `${this.studyVisit.currentVisitName}`);
+
+        acc.addPane(`Summary`, () => {
+            return ui.tableFromMap({
+                'Visit day': this.studyVisit.currentVisitDay,
+                'Total patients': this.studyVisit.totalPatients,
+                'Min visit date': this.studyVisit.minVisitDate,
+                'Max visit dae': this.studyVisit.maxVisitDate,
+            })
+        });
+
+        let getRowNumber = (df) => {
+            return df ? df.rowCount === 1 && df.getCol(SUBJECT_ID).isNone(0) ? 0 : df.rowCount : 0;
+        }
+
+        if (this.studyVisit.exAtVisit && this.studyVisit.exAtVisit.columns.names().includes(this.studyVisit.exAtVisit)) {
+            acc.addPane('Drug exposure', () => {
+                if (!getRowNumber(this.studyVisit.exAtVisit)) {
+                    return ui.divText('No records found');
+                }
+                return DG.Viewer.fromType(DG.VIEWER.PIE_CHART, this.studyVisit.exAtVisit, {
+                    category: this.studyVisit.extrtWithDoseColName,
+                }).root;
+            })
+        }
+
+        let createPane = (name, rowNum, df, splitCol) => {
+            acc.addCountPane(`${name}`, () => getPaneContent(df, splitCol, rowNum), () => rowNum);
+            let panel = acc.getPane(`${name}`);
+            //@ts-ignore
+            $(panel.root).css('display', 'flex');
+            //@ts-ignore
+            $(panel.root).css('opacity', '1');
+        }
+
+        let getPaneContent = (df, splitCol, rowNum) => {
+            if (!rowNum) {
+                return ui.divText('No records found');
+            } else {
+                return df.plot.bar({
+                    split: splitCol,
+                    style: 'dashboard',
+                    legendVisibility: 'Never'
+                }).root;
+            }
+        }
+
+        let aeRowNum = getRowNumber(this.studyVisit.aeSincePreviusVisit);
+        createPane('AEs since last visit', aeRowNum, this.studyVisit.aeSincePreviusVisit, AE_DECOD_TERM);
+
+        let cmRowNum = getRowNumber(this.studyVisit.conmedSincePreviusVisit);
+        createPane('CONMEDs since last visit', cmRowNum, this.studyVisit.conmedSincePreviusVisit, CON_MED_NAME);
+
+        let createDistributionPane = (name, df, catCol, valCol) => {
+            acc.addPane(name, () => {
+                if (!getRowNumber(df)) {
+                    return ui.divText('No records found');
+                }
+                let categoriesAcc = ui.accordion();
+                df.getCol(catCol).categories.forEach(cat => {
+                    categoriesAcc.addPane(`${cat}`, () => {
+                        let valueDf = df.groupBy(df.columns.names())
+                            .where(`${catCol} = ${cat}`)
+                            .aggregate();
+                        const plot = DG.Viewer.boxPlot(valueDf, {
+                            value: `${valCol}`,
+                            category: `${catCol}`,
+                            labelOrientation: 'Horz',
+                            showCategorySelector: false,
+                            showValueSelector: false
+                        });
+                        return plot.root;
+                    })
+                })
+                return categoriesAcc.root;
+            })
+        }
+        if (this.studyVisit.lbAtVisit && [LAB_TEST, LAB_RES_N].every(it => this.studyVisit.lbAtVisit.columns.names().includes(it))) {
+            createDistributionPane('Laboratory', this.studyVisit.lbAtVisit, LAB_TEST, LAB_RES_N);
+        }
+        if (this.studyVisit.vsAtVisit && [VS_TEST, VS_RES_N].every(it => this.studyVisit.vsAtVisit.columns.names().includes(it))) {
+            createDistributionPane('Vital signs', this.studyVisit.vsAtVisit, VS_TEST, VS_RES_N);
+        }
+
+        panelDiv.append(acc.root);
+
+        return panelDiv;
+
+    }
+
+    async patientVisitPanel(patientVisit: PatientVisit) {
+        let panelDiv = ui.div();
+        let acc = this.createAccWithTitle('Patient visit panel', `${patientVisit.currentSubjId}`);
+        
+        let getPaneContent = (it, rowNum) => {
+            if (it) {
+                if (!rowNum) {
+                    return ui.divText('No records found');
+                } else {
+                    let grid = patientVisit[it].plot.grid();
+                    if (rowNum < 7) {
+                        grid.root.style.maxHeight = rowNum < 4 ? '100px' : '150px';
+                    }
+                    grid.root.style.width = '250px';
+                    return ui.div(grid.root);
+                }
+            }
+        }
+
+        let createPane = (it, name, rowNum) => {
+            acc.addCountPane(`${name}`, () => getPaneContent(it, rowNum), () => rowNum);
+            let panel = acc.getPane(`${name}`);
+            //@ts-ignore
+            $(panel.root).css('display', 'flex');
+            //@ts-ignore
+            $(panel.root).css('opacity', '1');
+        }
+
+
+        let createAccordion = () => {
+            Object.keys(patientVisit.domainsNamesDict).forEach(key => {
+                let domain = patientVisit.domainsNamesDict[key];
+                if (patientVisit[domain]) {
+                    const rowNum =
+                        patientVisit[domain].rowCount === 1 && patientVisit[domain].getCol(SUBJECT_ID).isNone(0) ?
+                            0 : patientVisit[domain].rowCount
+                    createPane(domain, key, rowNum);
+                }
+            });
+        }
+
+        createAccordion();
+
+        panelDiv.append(acc.root);
+
+        return panelDiv;
 
     }
 

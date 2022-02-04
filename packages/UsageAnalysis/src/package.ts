@@ -10,27 +10,22 @@ import {ErrorsView} from "./views/errors-view";
 import {UsersView} from "./views/users-view";
 import {OverviewView} from "./views/overview-view";
 import {DataView} from "./views/data-view";
+import {UrlHandler} from "./url-handler";
+import {FunctionErrorsView} from "./views/function-errors-view";
 
 export let _package = new DG.Package();
 
 //name: UsageAnalysis
 //tags: app
 export function usageAnalysisApp(): void {
-
-  // let arr = ['Events', 'Errors', 'Users', 'Overview', 'Data'];
-  //
-  // grok.events.onEvent('d4-current-view-changed').subscribe(
-  //     () => {
-  //       grok.shell.info(grok.shell.v.name);
-  //       arr.indexOf(grok.shell.v.name);
-  //       grok.shell.v.path = grok.shell.v.name;
-  //     });
+  new UrlHandler();
 
   let toolbox = new UaToolbox();
   let overviewView = new OverviewView(toolbox);
   grok.shell.addView(overviewView);
   grok.shell.addView(new EventsView(toolbox));
   grok.shell.addView(new ErrorsView(toolbox));
+  grok.shell.addView(new FunctionErrorsView(toolbox));
   grok.shell.addView(new UsersView(toolbox));
   grok.shell.addView(new DataView(toolbox));
   grok.shell.v = overviewView;

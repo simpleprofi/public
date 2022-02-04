@@ -1,13 +1,35 @@
 import { study } from "../clinical-study";
 import * as ui from "datagrok-api/ui";
-import { domains } from "../sdtm-meta";
+import * as DG from 'datagrok-api/dg';
+import { DependencyGraph } from "ts-loader/dist/interfaces";
 
 export function updateDivInnerHTML(div: HTMLDivElement, content: any){
     div.innerHTML = '';
     div.append(content);
   }
 
+export function checkRequiredColumns(df: DG.DataFrame, columns: string[], viwerName: string) {
+  if (columns.filter(it => !df.columns.names().includes(it)).length) {
+    return `Columns ${columns.join(',')} are required for ${viwerName} viewer`;
+  }
+  return null;
+}
+
+export function checkColumnsAndCreateViewer(df: DG.DataFrame, columns: string[], div: HTMLDivElement, createViewer : () => any, viewerName: string ) {
+  const message = checkRequiredColumns(df, columns, viewerName);
+  message ? updateDivInnerHTML(div, ui.info(`${message}`)) : createViewer();
+}
+
 export function checkMissingDomains(requiredDomainsAndCols: any, obj: any) {
+  let loadObject = (obj) => {
+    obj.createView();
+    obj.loaded = true;
+  }
+  
+  if(!requiredDomainsAndCols) {
+     loadObject(obj);
+     return;
+  }
   let reqDomains = requiredDomainsAndCols['req_domains'] ? Object.keys(requiredDomainsAndCols['req_domains']) : [];
   let optDomains = requiredDomainsAndCols['opt_domains'] ? Object.keys(requiredDomainsAndCols['opt_domains']) : [];
   let missingReqDomains = reqDomains.filter(it => study.domains[it] === null);
@@ -23,14 +45,13 @@ export function checkMissingDomains(requiredDomainsAndCols: any, obj: any) {
   });
   if (!totalMissingDomains.length) {
     if (checkMissingColumns(obj, reqDomains.concat(presentOptDomains), requiredColumns)) {
-      obj.createView();
-      obj.loaded = true;
+      loadObject(obj);
     }
   } else {
     const errorsDiv = ui.divV([], { style: { margin: 'auto', textAlign: 'center' } });
     createMissingDataDiv(errorsDiv, totalMissingDomains, 'Missing domains:');
     checkMissingColumns(errorsDiv, reqDomains.concat(optDomains), requiredColumns);
-    obj.root.append(errorsDiv);
+    updateDivInnerHTML(obj.root, errorsDiv);
   }
 }
 
@@ -55,7 +76,7 @@ export function checkMissingColumns(obj: any, reqDomains: string[], requiredDoma
   return noMissingCols;
 }
 
-function createMissingDataDiv(div: HTMLDivElement, missingDomainsOrCols: string[], header: string){
+export function createMissingDataDiv(div: HTMLDivElement, missingDomainsOrCols: string[], header: string){
   let domainsDiv = ui.div();
   missingDomainsOrCols.forEach(it => {domainsDiv.append(ui.divText(it))})
   div.append(ui.div([

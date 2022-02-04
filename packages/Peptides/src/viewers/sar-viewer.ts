@@ -3,6 +3,7 @@ import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 
 import $ from 'cash-dom';
+import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
 
 import {model} from '../model';
 
@@ -28,7 +29,7 @@ export class SARViewer extends DG.JsViewer {
   protected viewerVGrid: DG.Grid | null;
   protected currentBitset: DG.BitSet | null;
   grouping: boolean;
-  groupMapping: {[key: string]: string} | null;
+  groupMapping: StringDictionary | null;
   // protected pValueThreshold: number;
   // protected amountOfBestAARs: number;
   // duplicatesHandingMethod: string;
@@ -139,9 +140,9 @@ export class SARViewer extends DG.JsViewer {
    * @memberof SARViewer
    */
   async render(computeData = true) {
-    if (!this.initialized) {
+    if (!this.initialized)
       return;
-    }
+
     //TODO: optimize. Don't calculate everything again if only view changes
     if (computeData) {
       if (typeof this.dataFrame !== 'undefined' && this.activityColumnName && this.sourceGrid) {
@@ -233,9 +234,9 @@ function syncGridsFunc(
   if (viewerGrid && viewerGrid.dataFrame && viewerVGrid && viewerVGrid.dataFrame) {
     if (sourceVertical) {
       const dfCell = viewerVGrid.dataFrame.currentCell;
-      if (dfCell.column === null || dfCell.column.name !== 'Mean difference') {
+      if (dfCell.column === null || dfCell.column.name !== 'Mean difference')
         return;
-      }
+
       const otherColName: string = viewerVGrid.dataFrame.get('Position', dfCell.rowIndex);
       const otherRowName: string = viewerVGrid.dataFrame.get(aminoAcidResidue, dfCell.rowIndex);
       let otherRowIndex = -1;
@@ -245,14 +246,13 @@ function syncGridsFunc(
           break;
         }
       }
-      if (otherRowIndex !== -1) {
+      if (otherRowIndex !== -1)
         viewerGrid.dataFrame.currentCell = viewerGrid.dataFrame.cell(otherRowIndex, otherColName);
-      }
     } else {
       const otherPos: string = viewerGrid.dataFrame.currentCol?.name;
-      if (typeof otherPos === 'undefined' && otherPos !== aminoAcidResidue) {
+      if (typeof otherPos === 'undefined' && otherPos !== aminoAcidResidue)
         return;
-      }
+
       const otherAAR: string =
         viewerGrid.dataFrame.get(aminoAcidResidue, viewerGrid.dataFrame.currentRowIdx);
       let otherRowIndex = -1;
@@ -265,9 +265,8 @@ function syncGridsFunc(
           break;
         }
       }
-      if (otherRowIndex !== -1) {
+      if (otherRowIndex !== -1)
         viewerVGrid.dataFrame.currentCell = viewerVGrid.dataFrame.cell(otherRowIndex, 'Mean difference');
-      }
     }
   }
 }
@@ -291,7 +290,7 @@ function applyBitset(
   dataFrame: DG.DataFrame,
   viewerGrid: DG.Grid,
   aminoAcidResidue: string,
-  groupMapping: {[key: string]: string},
+  groupMapping: StringDictionary,
   initialBitset: DG.BitSet,
   filterMode: boolean,
 ) {
@@ -310,9 +309,9 @@ function applyBitset(
     const aarLabel = `${currentAAR === '-' ? 'Empty' : currentAAR} - ${currentPosition}`;
 
     let splitCol = dataFrame.col(splitColName);
-    if (!splitCol) {
+    if (!splitCol)
       splitCol = dataFrame.columns.addNew(splitColName, 'string');
-    }
+
 
     const isChosen = (i: number) => groupMapping[dataFrame!.get(currentPosition, i)] === currentAAR;
     splitCol!.init((i) => isChosen(i) ? aarLabel : otherLabel);
@@ -363,9 +362,9 @@ function accordionFunc(
       const elements: (HTMLLabelElement | HTMLElement)[] = [currentLabel, otherLabel];
 
       const distPane = accordion.getPane('Distribution');
-      if (distPane) {
+      if (distPane)
         accordion.removePane(distPane);
-      }
+
       accordion.addPane('Distribution', () => {
         const hist = originalDf.clone(initialBitset).plot.histogram({
         // const hist = originalDf.plot.histogram({
@@ -380,7 +379,7 @@ function accordionFunc(
         hist.style.width = 'auto';
         elements.push(hist);
 
-        const tableMap: {[key: string]: string} = {'Statistics:': ''};
+        const tableMap: StringDictionary = {'Statistics:': ''};
         for (const colName of new Set(['Count', 'pValue', 'Mean difference'])) {
           const query = `${aminoAcidResidue} = ${currentAAR} and Position = ${currentPosition}`;
           const textNum = statsDf.groupBy([colName]).where(query).aggregate().get(colName, 0);

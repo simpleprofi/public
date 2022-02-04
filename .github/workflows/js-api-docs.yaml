@@ -10,6 +10,7 @@ on:
 
 jobs:
   doc:
+    name: Generate documentation
     runs-on: ubuntu-20.04
     steps:
       - name: Checkout
@@ -34,6 +35,7 @@ jobs:
           retention-days: 7
 
   deploy:
+    name: Deploy documentation to server
     needs: doc
     runs-on: ubuntu-20.04
     environment: Help
@@ -68,7 +70,7 @@ jobs:
             --itemize-changes \
             --stats \
             --human-readable \
-            "js_api_docs/" $REMOTE_USER@$REMOTE_HOST:$TARGET
+            "js_api_docs/" "$REMOTE_USER@$REMOTE_HOST:$TARGET"
         env:
           SSH_PRIVATE_KEY: ${{ secrets.HELP_SSH_KEY }}
           SSH_KNOWN_HOSTS: ${{ secrets.HELP_KNOWN_HOST }}

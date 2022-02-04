@@ -3,11 +3,12 @@ import {__obs, _sub, observeStream, StreamSubscription} from "./events";
 import {Observable, Subscription} from "rxjs";
 import {Func, Property, PropertyOptions} from "./entities";
 import {Cell, Column, DataFrame} from "./dataframe";
-import {ColorType, LegendPosition, Type} from "./const";
+import {ColorType, FILTER_TYPE, LegendPosition, Type} from "./const";
 import * as rxjs from "rxjs";
 import { filter } from 'rxjs/operators';
 import {Rect} from "./grid";
 import $ from "cash-dom";
+import {Viewer} from "./viewer";
 
 declare let grok: any;
 declare let DG: any;
@@ -259,6 +260,8 @@ export abstract class Filter extends Widget {
 
   columnName?: string;
 
+  /** Caption to be shown in the filter group. */
+  get caption(): string { return this.columnName ?? ''}
 
   constructor() {
     super(ui.div());
@@ -269,6 +272,17 @@ export abstract class Filter extends Widget {
 
     $(this.indicator).hide();
   }
+
+  // static create(type: FILTER_TYPE | null, column: Column): Filter {
+  //   return api.grok_Filter_ForColumn(column, type);
+  // }
+  //
+  // static forColumn(column: Column) { return Filter.create(null, column); }
+  //
+  // static histogram(column: Column) { return Filter.create(FILTER_TYPE.HISTOGRAM, column); }
+  // static categorical(column: Column) { return Filter.create(FILTER_TYPE.CATEGORICAL, column); }
+  // static multiValue(column: Column) { return Filter.create(FILTER_TYPE.MULTI_VALUE, column); }
+  // static freeText(column: Column) { return Filter.create(FILTER_TYPE.FREE_TEXT, column); }
 
   /** Override to indicate whether the filter actually filters something (most don't in the initial state).
    * This is used to minimize the number of unnecessary computations. */
@@ -726,9 +740,7 @@ export class Menu {
     api.grok_Menu_Clear(this.dart);
   }
 
-  /** Returns an existing menu group or adds a new group with the specified text.
-   * @param {string} text
-   * @returns {Menu} */
+  /** Returns an existing menu group or adds a new group with the specified text. */
   group(text: string, order: number | null = null): Menu {
     return toJs(api.grok_Menu_Group(this.dart, text, order));
   }
@@ -739,20 +751,13 @@ export class Menu {
     return toJs(api.grok_Menu_EndGroup(this.dart));
   }
 
-  /** Adds a menu group with the specified text and handler.
-   * @param {string} text
-   * @param {Function} onClick - callback with no parameters
-   * @returns {Menu} */
-  item(text: string, onClick: Function, order: number | null = null): Menu {
+  /** Adds a menu group with the specified text and handler. */
+  item(text: string, onClick: () => void, order: number | null = null): Menu {
     return toJs(api.grok_Menu_Item(this.dart, text, onClick, order));
   }
 
-  /** For each item in items, adds a menu group with the specified text and handler.
-   * Returns this.
-   * @param {string[]} items
-   * @param {Function} onClick - a callback with one parameter
-   * @returns {Menu} */
-  items(items: string[], onClick: Function): Menu {
+  /** For each item in items, adds a menu group with the specified text and handler. */
+  items(items: string[] | HTMLElement[], onClick: (item: string) => void): Menu {
     return toJs(api.grok_Menu_Items(this.dart, items, onClick));
   }
 
@@ -882,6 +887,11 @@ export class InputBase {
   /** Adds the specified caption */
   addCaption(caption: string): void {
     api.grok_InputBase_AddCaption(this.dart, caption);
+  };
+
+  /** Adds the specified postfix */
+  addPostfix(postfix: string): void {
+    api.grok_InputBase_AddPostfix(this.dart, postfix);
   };
 
   /** Adds a usage example to the input's hamburger menu */
@@ -1349,8 +1359,8 @@ export class TreeViewNode {
 /** A slider that lets user control both min and max values. */
 export class RangeSlider extends DartWidget {
 
-  static create(): RangeSlider {
-    return toJs(api.grok_RangeSlider());
+  static create(vertical: boolean = false): RangeSlider {
+    return toJs(api.grok_RangeSlider(vertical));
   }
 
   /** Minimum range value. */

@@ -5,14 +5,13 @@ import { study } from "../clinical-study";
 import { addDataFromDmDomain, getUniqueValues } from '../data-preparation/utils';
 import { createBaselineEndpointDataframe } from '../data-preparation/data-preparation';
 import { ETHNIC, LAB_RES_N, LAB_TEST, VISIT_DAY, VISIT_NAME, RACE, SEX, SUBJECT_ID, TREATMENT_ARM, LAB_LO_LIM_N, LAB_HI_LIM_N, VS_TEST, VS_RES_N } from '../columns-constants';
-import { checkMissingDomains, updateDivInnerHTML } from './utils';
-import { ILazyLoading } from '../lazy-loading/lazy-loading';
+import { updateDivInnerHTML } from './utils';
 import { _package } from '../package';
-import { requiredColumnsByView } from '../constants';
+import { ClinicalCaseViewBase } from '../model/ClinicalCaseViewBase';
 var { jStat } = require('jstat')
 
 
-export class BoxPlotsView extends DG.ViewBase implements ILazyLoading {
+export class BoxPlotsView extends ClinicalCaseViewBase {
 
   domains = ['lb', 'vs'];
   domainFields = {'lb': {'test': LAB_TEST, 'res': LAB_RES_N}, 'vs': {'test': VS_TEST, 'res': VS_RES_N}};
@@ -39,12 +38,6 @@ export class BoxPlotsView extends DG.ViewBase implements ILazyLoading {
     this.name = name;
     this.helpUrl = `${_package.webRoot}/views_help/biomarkers_distribution.md`;
   }
-
-  loaded = false;
-
-  load(): void {
-    checkMissingDomains(requiredColumnsByView[this.name], this);
- }
 
   createView(): void {
 
@@ -83,19 +76,20 @@ export class BoxPlotsView extends DG.ViewBase implements ILazyLoading {
       this.uniqueValues[it] = Array.from(getUniqueValues(study.domains[it], this.domainFields[it]['test']));
     });
 
-    let minLabVisit = this.distrDataframe.getCol(VISIT_DAY).stats[ 'min' ];
+    /* let minLabVisit = this.distrDataframe.getCol(VISIT_DAY).stats[ 'min' ];
     let minVisitName = this.distrDataframe
       .groupBy([ VISIT_DAY, VISIT_NAME ])
       .where(`${VISIT_DAY} = ${minLabVisit}`)
       .aggregate()
       .get(VISIT_NAME, 0);
-    this.bl = minVisitName;
+    this.bl = minVisitName; */
 
     this.uniqueVisits = Array.from(getUniqueValues(this.distrDataframe, VISIT_NAME));
+    this.bl = this.uniqueVisits[0];
     this.distrWithDmData = addDataFromDmDomain(this.distrDataframe, study.domains.dm, [ SUBJECT_ID, VISIT_DAY, VISIT_NAME, 'test', 'res' ], this.splitBy);
     this.distrWithDmData = this.distrWithDmData
       .groupBy(this.distrWithDmData.columns.names())
-      .where(`${VISIT_DAY} = ${minLabVisit}`)
+      .where(`${VISIT_NAME} = ${this.bl}`)
       .aggregate();
     this.getTopPValues(4);
 

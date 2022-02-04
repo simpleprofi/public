@@ -456,7 +456,7 @@ view.matrixPlot();
 
 Network diagram is used to visualize graphs, where values of the specified two columns become nodes, and rows become
 edges. It is possible to color-code and size-code nodes and columns by choosing the aggregate function that would apply
-to the values that represent an edge or a node.
+to the values that represent an edge or a Node.js.
 
 ```javascript
 let view = grok.shell.addTableView(grok.data.demo.demog());
@@ -480,7 +480,7 @@ let view = grok.shell.addTableView(grok.data.demo.demog());
 view.pcPlot();
 ```
 
-### Scatter plot 3d
+### Scatter plot 3D
 
 Use 3D scatter plot to plot data points on three axes to show the relationship between three variables. Each row in the
 data table is represented by a marker whose position depends on its values in the columns set on the X, Y, and Z axes.
@@ -869,6 +869,15 @@ Range slider is a UI control that enables to select a value range within a prede
 ui.rangeSlider(0, 10, 2, 5);
 ```
 
+### Color picker
+
+UI element that lets a user specify a color, either by using a visual color picker interface or by entering the color
+into a text field in hexadecimal format.
+
+```javascript
+ui.colorInput('Hair color', '#ff0000');
+```
+
 ## Icons
 
 The icon control displays the icon from the FontAwesome library. Icon can used as a button control. Use FontAwesome
@@ -960,7 +969,7 @@ ui.div([ui.comboPopupItems('Combo popup label', {
 
 ## Markdown
 
-Markdown is a control that renders markdown documents into your app.
+Markdown is a control that renders Markdown documents into your app.
 
 ```javascript
 let document = `# Intro

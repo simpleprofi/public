@@ -107,6 +107,15 @@ export enum TYPE {
   NOTEBOOK = 'Notebook'
 }
 
+export enum FILTER_TYPE {
+ HISTOGRAM = 'histogram',
+ CATEGORICAL = 'categorical',
+ MULTI_VALUE = 'multi-value',
+ BOOL_COLUMNS = 'bool-columns',
+ FREE_TEXT = 'free-text',
+ COLUMN_FREE_TEXT = 'column-free-text'
+}
+
 export const TYPES_SCALAR = new Set([TYPE.INT, TYPE.BIG_INT, TYPE.FLOAT, TYPE.NUM, TYPE.BOOL, TYPE.STRING]);
 
 /** @enum {VIEWER_PROPERTY_TYPE} */
@@ -281,8 +290,12 @@ export const FUNC_TYPES = {
   /**
    * Function analysis. Examples: sensitivity analysis, parameter editor
    * Func => View */
-  FUNCTION_ANALYSIS: 'functionAnalysis'
+  FUNCTION_ANALYSIS: 'functionAnalysis',
+
+  /** Converts values. Has one input and one output */
+  CONVERTER: 'converter'
 }
+
 
 ////// Viewers
 /** @enum {VIEWER} */

@@ -306,8 +306,8 @@ export class LruCache {
   private size: number;
   private head: number;
 
-  constructor() {
-    this.capacity = 100;
+  constructor(capacity: number = 100) {
+    this.capacity = capacity;
     this.forward = new Uint16Array(this.capacity);
     this.backward = new Uint16Array(this.capacity);
     this.V = new Array(this.capacity);
@@ -506,9 +506,4 @@ export function _propsToDart(s: string): string {
 
 export function format(x: number, format?: string): string {
   return api.grok_Utils_FormatNumber(x, format);
-}
-
-export function getUniqueName(name: string, existing: string[],
-    options?: { auto?: boolean, idx?: number, render?: Function, choices?: string[] }): string {
-  return api.grok_Utils_GetUniqueName(name, existing, options?.auto, options?.idx, options?.render, options?.choices);
 }

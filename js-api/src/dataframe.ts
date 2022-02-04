@@ -20,7 +20,8 @@ import {filter} from "rxjs/operators";
 import {Widget} from "./widgets";
 import {Grid} from "./grid";
 import {ScatterPlotViewer, Viewer} from "./viewer";
-import {Property} from "./entities";
+import {Property, TableInfo} from "./entities";
+import {FormulaLinesHelper} from "./helpers";
 
 declare let grok: any;
 declare let DG: any;
@@ -500,6 +501,10 @@ export class DataFrame {
 
   getDensity(xBins: number, yBins: number, xColName: string, yColName: string): Int32Array {
     return api.grok_MathActions_GetDensity(this.dart, xBins, yBins, xColName, yColName);
+  }
+
+  getTableInfo(): TableInfo {
+    return toJs(api.grok_DataFrame_Get_TableInfo(this.dart));
   }
 }
 
@@ -1157,6 +1162,16 @@ export class ColumnList {
    * */
   replace(columnToReplace: Column | string, newColumn: Column): Column {
     return toJs(api.grok_ColumnList_Replace(this.dart, (typeof columnToReplace === 'string') ? columnToReplace:  columnToReplace.dart, newColumn.dart));
+  }
+
+  /** Returns a name that does not exist in column list.
+   * If column list does not contain column with [name], returns [name].
+   * Otherwise, tries [choices], and if the names are taken already, returns a string in a form of 'name (i)'.
+   * @param {string} name
+   * @param {string[]} choices
+   * */
+  getUnusedName(name: string, choices?: string[]): string {
+    return api.grok_ColumnList_GetUnusedName(this.dart, name, choices);
   }
 
   /** Iterates over all columns.
@@ -2048,88 +2063,26 @@ export class Qnum {
   }
 }
 
-export interface FormulaLine {
-  id?: string;
-  type?: string;
-  title?: string;
-  description?: string;
-  color?: string;
-  visible?: boolean;
-  opacity?: number;
-  zindex?: number;
-  min?: number;
-  max?: number;
-  formula?: string;
-
-  // Specific to lines:
-  width?: number;
-  spline?: number;
-  style?: string;
-
-  // Specific to bands:
-  column?: string;
-  column2?: string;
-}
-
 export class DataFrameMetaHelper {
-  private readonly df: DataFrame;
-  private formulaLines: FormulaLine[] = [];
+  private readonly _df: DataFrame;
+
+  readonly formulaLines: DataFrameFormulaLinesHelper;
 
   constructor(df: DataFrame) {
+    this._df = df;
+    this.formulaLines = new DataFrameFormulaLinesHelper(this._df);
+  }
+}
+
+export class DataFrameFormulaLinesHelper extends FormulaLinesHelper {
+  readonly df: DataFrame;
+
+  get storage(): string { return this.df.getTag(DG.TAGS.FORMULA_LINES) ?? ''; }
+  set storage(value: string) { this.df.setTag(DG.TAGS.FORMULA_LINES, value); }
+
+  constructor(df: DataFrame) {
+    super();
     this.df = df;
-    this.formulaLines = this.getFormulaLines();
-  }
-
-  getFormulaLines(): FormulaLine[] {
-    let json: string | null = this.df.getTag(DG.TAGS.FORMULA_LINES);
-    if (json)
-      return JSON.parse(json);
-
-    return [];
-  }
-
-  addFormulaLines(items: FormulaLine[] | null = null): void {
-    if (!items)
-      return;
-
-    let json: string | null = _toJson(items);
-    if (json)
-      this.df.setTag(DG.TAGS.FORMULA_LINES, json);
-  }
-
-  addFormulaItem(item: FormulaLine): void {
-    this.formulaLines.push(toJs(api.grok_FormulaLineHelper_AddDefaults(item)));
-    this.addFormulaLines(this.formulaLines);
-  }
-
-  addFormulaLine(item: FormulaLine): void {
-    item.type = 'line';
-    this.addFormulaItem(item);
-  }
-
-  addFormulaBand(item: FormulaLine): void {
-    item.type = 'band';
-    this.addFormulaItem(item);
-  }
-
-  removeFormulaLines(...ids: string[]): void {
-    if (ids.length == 0) {
-      this.formulaLines = [];
-      this.df.setTag(DG.TAGS.FORMULA_LINES, '[]');
-      return;
-    }
-
-    this.formulaLines = this.formulaLines.filter((item: FormulaLine) =>
-        item.id == undefined || ids.indexOf(item.id) == -1);
-
-    this.addFormulaLines(this.formulaLines);
-  }
-
-  getFormulaLineAxes(item: FormulaLine): String[] {
-    if (item.type == 'line')
-      return api.grok_FormulaLineHelper_GetAxes(item.formula);
-    else // if (item.type == 'band')
-      return [item.column2!, item.column!];
   }
 }
 

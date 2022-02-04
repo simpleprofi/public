@@ -3,6 +3,7 @@ import * as DG from 'datagrok-api/dg';
 import {createPeptideSimilaritySpaceViewer} from './utils/peptide-similarity-space';
 import {addViewerToHeader} from './viewers/stacked-barchart-viewer';
 import {model} from './model';
+import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
 // import $ from 'cash-dom';
 
 /**
@@ -24,16 +25,15 @@ export class Peptides {
    * @param {DG.Grid} tableGrid Working talbe grid.
    * @param {DG.TableView} view Working view.
    * @param {DG.DataFrame} currentDf Working table.
-   * @param {{[key: string]: string}} options SAR viewer options
+   * @param {StringDictionary} options SAR viewer options
    * @param {DG.Column} col Aligned sequences column.
-   * @param {string} activityColumnChoice Activity column name.
    * @memberof Peptides
    */
   async init(
     tableGrid: DG.Grid,
     view: DG.TableView,
     currentDf: DG.DataFrame,
-    options: {[key: string]: string},
+    options: StringDictionary,
     col: DG.Column,
   ) {
     for (let i = 0; i < tableGrid.columns.length; i++) {
@@ -52,17 +52,21 @@ export class Peptides {
     const originalDfName = currentDf.name;
 
     // const substViewer = view.addViewer(
-    //   'substitution-analysis-viewer', {'activityColumnName': options['activityColumnName']},
+    //   'substitution-analysis-viewer', {'activityColumnName': `${options['activityColumnName']}Scaled`},
     // );
     // const substNode = view.dockManager.dock(substViewer, DG.DOCK_TYPE.RIGHT, null, 'Substitution Analysis');
 
     // const layout1 = view.saveLayout();
     // view.dockManager.close(substNode);
 
+    const helpUrl = '/help/domains/bio/peptides.md';
+
     const sarViewer = view.addViewer('peptide-sar-viewer', options);
+    sarViewer.helpUrl = helpUrl;
     const sarNode = view.dockManager.dock(sarViewer, DG.DOCK_TYPE.DOWN, null, 'SAR Viewer');
 
     const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
+    sarViewerVertical.helpUrl = helpUrl;
     const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
 
     const peptideSpaceViewer = await createPeptideSimilaritySpaceViewer(
@@ -72,11 +76,11 @@ export class Peptides {
       'Levenshtein',
       100,
       view,
-      `${options['activityColumnChoice']}Scaled`,
+      `${options['activityColumnName']}Scaled`,
     );
     const psNode = view.dockManager.dock(peptideSpaceViewer, DG.DOCK_TYPE.LEFT, sarNode, 'Peptide Space Viewer', 0.3);
 
-    const layout2 = view.saveLayout();
+    // const layout2 = view.saveLayout();
 
     const nodeList = [sarNode, sarVNode, psNode];
 
@@ -87,17 +91,15 @@ export class Peptides {
     const hideIcon = ui.iconFA('window-close', () => { //undo?, times?
       const viewers = [];
       for (const viewer of view.viewers) {
-        if (viewer.type !== DG.VIEWER.GRID) {
+        if (viewer.type !== DG.VIEWER.GRID)
           viewers.push(viewer);
-        }
       }
       viewers.forEach((v) => v.close());
 
       const cols = (currentDf.columns as DG.ColumnList);
       for (const colName of cols.names()) {
-        if (!originalDfColumns.includes(colName)) {
+        if (!originalDfColumns.includes(colName))
           cols.remove(colName);
-        }
       }
 
       currentDf.selection.setAll(false);
@@ -132,13 +134,15 @@ export class Peptides {
       nodeList.length = 0;
       if (isSA) {
         const sarViewer = view.addViewer('peptide-sar-viewer', options);
+        sarViewer.helpUrl = helpUrl;
         const sarNode = view.dockManager.dock(sarViewer, DG.DOCK_TYPE.DOWN, null, 'SAR Viewer');
 
         const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
+        sarViewerVertical.helpUrl = helpUrl;
         const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
 
         const peptideSpaceViewer = await createPeptideSimilaritySpaceViewer(
-          currentDf, col, 't-SNE', 'Levenshtein', 100, view, `${options['activityColumnChoice']}Scaled`);
+          currentDf, col, 't-SNE', 'Levenshtein', 100, view, `${options['activityColumnName']}Scaled`);
         const psNode = view.dockManager.dock(
           peptideSpaceViewer, DG.DOCK_TYPE.LEFT, sarNode, 'Peptide Space Viewer', 0.3);
 
@@ -150,9 +154,10 @@ export class Peptides {
         $(switchViewers).addClass('fa-toggle-on');
       } else {
         const substViewer = view.addViewer(
-          'substitution-analysis-viewer', {'activityColumnName': options['activityColumnName']},
+          'substitution-analysis-viewer', {'activityColumnName': `${options['activityColumnName']}Scaled`},
         );
-        nodeList.push(view.dockManager.dock(substViewer, DG.DOCK_TYPE.RIGHT, null, 'Substitution Analysis'));
+        substViewer.helpUrl = helpUrl;
+        nodeList.push(view.dockManager.dock(substViewer, DG.DOCK_TYPE.DOWN, null, 'Substitution Analysis'));
         $(switchViewers).removeClass('fa-toggle-on');
         $(switchViewers).addClass('fa-toggle-off');
       }

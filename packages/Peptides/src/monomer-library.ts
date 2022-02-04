@@ -4,71 +4,106 @@ import * as grok from 'datagrok-api/grok';
 
 /** HELM associated sdf libraries with monomer processing*/
 export class MonomerLibrary {
-
   private monomerFields: string[] = ['molecule', 'MonomerType', 'MonomerNaturalAnalogCode', 'MonomerName', 'MonomerCode', 'MonomerCaps', 'BranchMonomer'];
   private library: {
     [name: string]: {
       mol: string,
       type: string,
-      code: string,
       analogueCode: string,
       linkages: { [link: string]: { atomNumber: number, type: string } }
     }
   } = {};
+  private monomers: string[] = [];
 
   constructor(sdf: string) {
-    //sdf = sdf.replaceAll('\n\[', '\[');
-    let sdfReader = new SDFReader();
-    let data = sdfReader.get_colls(sdf);
-    this.monomerFields.forEach(f => {
+    const sdfReader = new SDFReader();
+    const data = sdfReader.get_colls(sdf);
+    this.monomerFields.forEach((f) => {
       if (!(f in data))
         throw `Monomer library was not compiled: ${f} field is absent in provided file`;
+
       if (data[f].length != data.molecule.length)
         throw `Monomer library was not compiled: ${f} field is not presented for each monomer`;
     });
 
     for (let i = 0; i < data.molecule.length; i++) {
-      let linkData = this.getLinkData(data.molecule[i], data.MonomerCaps[i], data.MonomerName[i]);
-      let entry = {
+      const linkData = this.getLinkData(data.molecule[i], data.MonomerCaps[i], data.MonomerName[i]);
+      const entry = {
         mol: data.molecule[i],
         type: 'Peptide',
         code: data.MonomerCode[i],
         analogueCode: data.MonomerNaturalAnalogCode[i],
-        linkages: linkData
+        linkages: linkData,
       };
-      this.library[data.MonomerName[i]] = entry;
+
+      const name = data.MonomerCode[i] !== '.' ? data.MonomerCode[i] : data.MonomerName[i];
+      this.library[name] = entry;
+      this.monomers.push(name);
     }
   }
 
+  /** getting full monomer information from monomer library*/
+  public getMonomerEntry(name: string) {
+    if (!this.monomers.includes(name))
+      throw `Monomer library do not contain ${name} monomer`;
+
+
+    return this.library[name];
+  }
+
+  /** getting mol as string for monomer*/
+  public getMonomerMol(name: string) {
+    if (!this.monomers.includes(name))
+      throw `Monomer library do not contain ${name} monomer`;
+
+
+    const entry = this.library[name];
+    let monomerMol = entry.mol.replace(/M  RGP  .+\n/, '');
+
+    //order matters
+    const links = Object.keys(entry.linkages);
+    for (let i = 0; i < links.length; i++)
+      monomerMol = monomerMol.replace('R#', entry.linkages[links[i]].type + ' ');
+
+
+    return monomerMol;
+  }
+
+  /** getting the list of the minomers available in library*/
+  get monomerNames() {
+    return this.monomers;
+  }
+
   private getLinkData(mol: string, caps: string, name: string) {
-    let rawData = mol.match(/M  RGP  .+/);
+    const rawData = mol.match(/M  RGP  .+/);
     if (rawData === null)
       throw `Monomer library was not compiled: ${name} entry has no RGP`;
 
-    let types: { [code: string]: string } = {};
-    caps.split('\n')?.forEach(e => {
+
+    const types: { [code: string]: string } = {};
+    caps.split('\n')?.forEach((e) => {
       types[e.match(/\d+/)![0]] = e.match(/(?<=\])\w+/)![0];
     });
 
-    let data = rawData![0].replace('M  RGP  ', '').split(/\s+/);
-    let res: { [link: string]: { atomNumber: number, type: string } } = {};
+    const data = rawData![0].replace('M  RGP  ', '').split(/\s+/);
+    const res: { [link: string]: { atomNumber: number, type: string } } = {};
     for (let i = 0; i < parseInt(data[0]); i++) {
-      let code = parseInt(data[2 * i + 2]);
+      const code = parseInt(data[2 * i + 2]);
       let type = '';
       switch (code) {
-        case 1:
-          type = 'N-terminal';
-          break;
-        case 2:
-          type = 'C-terminal';
-          break;
-        case 3:
-          type = 'branch';
-          break;
-        default:
-          break;
+      case 1:
+        type = 'N-terminal';
+        break;
+      case 2:
+        type = 'C-terminal';
+        break;
+      case 3:
+        type = 'branch';
+        break;
+      default:
+        break;
       }
-      res[type] = { atomNumber: parseInt(data[2 * i + 1]), type: types[code] };
+      res[type] = {atomNumber: parseInt(data[2 * i + 1]), type: types[code]};
     }
 
     return res;
@@ -80,7 +115,7 @@ class SDFReader {
   dataColls: { [_: string]: any };
 
   constructor() {
-    this.dataColls = { 'molecule': [] };
+    this.dataColls = {'molecule': []};
   }
 
   get_colls(content: string) {
@@ -112,6 +147,7 @@ class SDFReader {
     if (nextStartIndex > -1)
       return nextStartIndex + 5;
 
+
     return nextStartIndex;
   }
 
@@ -126,10 +162,12 @@ class SDFReader {
       if (start === -1)
         return;
 
+
       start += 3;
       localEnd = content.indexOf('>\n', start);
       if (localEnd === -1)
         return;
+
 
       const propertyName = content.substring(start, localEnd);
       start = localEnd + 2;
@@ -138,7 +176,8 @@ class SDFReader {
       if (localEnd === -1)
         localEnd = end;
       else if (content[localEnd + 1] != '\n')
-        localEnd = content.indexOf('\n', ++localEnd);;
+        localEnd = content.indexOf('\n', ++localEnd);
+      ;
 
       handler(propertyName, content.substring(start, localEnd));
       localEnd += 2;

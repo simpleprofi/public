@@ -3,7 +3,6 @@ import { DataFrame, DateTime } from "datagrok-api/dg";
 import { ClinicalDomains, ClinicalStudy} from '../clinical-study';
 import { INV_DRUG_DOSE, INV_DRUG_DOSE_UNITS, INV_DRUG_NAME, SUBJECT_ID, VISIT_DAY, VISIT_NAME, VISIT_START_DATE } from "../columns-constants";
 import { addColumnWithDrugPlusDosage } from "../data-preparation/data-preparation";
-import { createPropertyPanel } from "../panels/panels-service";
 
 export class StudyVisit {
 
@@ -39,29 +38,26 @@ export class StudyVisit {
         this.maxVisitDate = new Date(this.visitDataframe.getCol(VISIT_START_DATE).stats.max * 1e-3).toLocaleDateString();
         this.aeSincePreviusVisit = this.createEventSincePeviousVisitDf('ae');
         this.conmedSincePreviusVisit = this.createEventSincePeviousVisitDf('cm');
-        if (this.domains.ex) {
+        if (this.domains.ex && this.domains.ex.columns.names().includes(VISIT_NAME)) {
             let ex = this.domains.ex.clone();
-            addColumnWithDrugPlusDosage(ex, INV_DRUG_NAME, INV_DRUG_DOSE, INV_DRUG_DOSE_UNITS, this.extrtWithDoseColName);
+            if (ex.columns.names().includes(INV_DRUG_NAME)) {
+                addColumnWithDrugPlusDosage(ex, INV_DRUG_NAME, INV_DRUG_DOSE, INV_DRUG_DOSE_UNITS, this.extrtWithDoseColName);
+            }
             this.exAtVisit = ex.groupBy(ex.columns.names())
             .where(`${VISIT_NAME} = ${this.currentVisitName}`)
             .aggregate();
         };
-        if (this.domains.lb) {
+        if (this.domains.lb && this.domains.lb.columns.names().includes(VISIT_NAME)) {
             this.lbAtVisit = this.domains.lb.groupBy(this.domains.lb.columns.names())
             .where(`${VISIT_NAME} = ${this.currentVisitName}`)
             .aggregate();
         };
-        if (this.domains.vs) {
+        if (this.domains.vs && this.domains.vs.columns.names().includes(VISIT_NAME)) {
             this.vsAtVisit = this.domains.vs.groupBy(this.domains.vs.columns.names())
             .where(`${VISIT_NAME} = ${this.currentVisitName}`)
             .aggregate();
         };
 
-    }
-
-    createStudyVisitPanel(visitDay: number, visitName: string, previsousVisitDay: number){
-        this.updateStudyVisit(visitDay, visitName, previsousVisitDay);
-        createPropertyPanel(this);
     }
 
     private createEventSincePeviousVisitDf(domain: string) {

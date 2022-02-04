@@ -524,8 +524,8 @@ export function showPopup(element: HTMLElement, anchor: HTMLElement, vertical: b
   return api.grok_UI_ShowPopup(element, anchor, vertical);
 }
 
-export function rangeSlider(minRange: number, maxRange: number, min: number, max: number): RangeSlider {
-  let rs = RangeSlider.create();
+export function rangeSlider(minRange: number, maxRange: number, min: number, max: number, vertical: boolean = false): RangeSlider {
+  let rs = RangeSlider.create(vertical);
   rs.setValues(minRange, maxRange, min, max);
   return rs;
 }
@@ -699,6 +699,10 @@ export function textInput(name: string, value: string, onValueChanged: Function 
   return new InputBase(api.grok_TextInput(name, value), onValueChanged);
 }
 
+export function colorInput(name: string, value: string, onValueChanged: Function | null = null): InputBase {
+  return new InputBase(api.grok_ColorInput(name, value), onValueChanged);
+}
+
 /**
  * Sample: {@link https://public.datagrok.ai/js/samples/ui/ui-events}
  * @param {HTMLElement} element
@@ -811,7 +815,7 @@ export class Tooltip {
   }
 
   /** Associated the specified visual element with the corresponding item. */
-  bind(element: HTMLElement, tooltip?: string | null): HTMLElement {
+  bind(element: HTMLElement, tooltip?: string | null | (() => string | null)): HTMLElement {
     if (tooltip != null)
       api.grok_Tooltip_SetOn(element, tooltip);
     return element;
@@ -1183,6 +1187,13 @@ export let icons = {
   search: (handler: Function, tooltipMsg: string | null = null) => _iconFA('search', handler, tooltipMsg),
   filter: (handler: Function, tooltipMsg: string | null = null) => _iconFA('filter', handler, tooltipMsg),
   play: (handler: Function, tooltipMsg: string | null = null) => _iconFA('play', handler, tooltipMsg),
+}
+
+export namespace tools {
+  export function click<T extends HTMLElement>(e: T, handler: () => void): T {
+    e.addEventListener('click', handler);
+    return e;
+  }
 }
 
 export namespace cards {

@@ -2,7 +2,7 @@
 	"name": "@datagrok/grokopenchemlib",
 	"beta": false,
 	"friendlyName": "OpenChemLib",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"description": "",
 	"dependencies": {
 		"datagrok-api": ">0.94.10",
@@ -25,6 +25,10 @@
 		"debug-openchemlib-public": "grok publish public --rebuild",
 		"release-openchemlib-public": "grok publish public --rebuild --release"
 	},
-	"canEdit": [ "Developers" ],
-	"canView": [ "All users" ]
+	"canEdit": [
+		"Developers"
+	],
+	"canView": [
+		"All users"
+	]
 }

@@ -1,7 +1,16 @@
+import * as grok from "datagrok-api/grok";
 
 export let tests: {[key: string]: {tests?: Test[], before?: () => Promise<void>, after?: () => Promise<void>, beforeStatus?: string, afterStatus?: string}} = {};
 
 export let currentCategory: string;
+
+export namespace assure {
+
+  export function notNull(value: any, name?: string) {
+    if (value == null)
+      throw `${name == null ? 'Value' : name} not defined`;
+  }
+}
 
 export class Test {
   test: () => Promise<any>;
@@ -23,10 +32,42 @@ export function test(name: string, test: () => Promise<any>): void {
   tests[currentCategory].tests!.push(new Test(currentCategory, name , test));
 }
 
+/** Awaits for a while checking the error status of the platform */
+export async function testAssureNoError(ms: number): Promise<boolean> {
+  const timer = (ms: number) => new Promise(res => setTimeout(res, ms));
+  for (let i = 0; i < ms / 500; ++i) {
+    await timer(500);
+    if (grok.shell.lastError.length !== 0)
+      return false;
+  }
+  return true;
+}
+
+/** Does best effort to catch all exceptional situations. Currently doesn't catch "Uncaught in promise" */
+export function testExpectFinish(name: string, foo: () => Promise<any>, ms: number = 5000): void {
+  test(name, async (): Promise<any> => {
+    try {
+      grok.shell.lastError = '';
+      await foo();
+    } catch (e: any) {
+      throw "Exception is not expected";
+    }
+    let noError = await testAssureNoError(ms);
+    if (!noError)
+      throw "Exceptions while waiting for results";
+  });
+}
+
 /** Tests two objects for equality, throws an exception if they are not equal. */
-export function expect(actual: any, expected: any) {
+export function expect(actual: any, expected: any): void {
   if (actual !== expected)
     throw `Expected "${expected}", got "${actual}"`;
+}
+
+export function expectFloat(actual: number, expected: number, tolerance = 0.001): void {
+  const areEqual = Math.abs(actual - expected) < 0.001;
+  if (!areEqual)
+    throw `Expected ${expected}, got ${actual} (tolerance = ${tolerance})"`;
 }
 
 /** Defines a test suite. */

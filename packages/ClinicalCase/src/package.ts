@@ -15,9 +15,7 @@ import {AERiskAssessmentView} from './views/ae-risk-assessment-view';
 import {SurvivalAnalysisView} from './views/survival-analysis-view';
 import { BoxPlotsView } from './views/boxplots-view';
 import { MatrixesView } from './views/matrixes-view';
-import { createPropertyPanel } from './panels/panels-service';
 import { TimeProfileView } from './views/time-profile-view';
-import { AeBrowserView } from './views/adverse-events-browser';
 import { AEBrowserHelper } from './helpers/ae-browser-helper';
 import { AE_END_DATE, AE_END_DAY, AE_SEVERITY, AE_START_DAY, AE_TERM, SUBJECT_ID, VISIT_DAY, VISIT_NAME, VISIT_START_DATE } from './columns-constants';
 import { STUDY_ID } from './columns-constants';
@@ -25,11 +23,6 @@ import { checkMissingColumns, checkMissingDomains } from './views/utils';
 import { TreeMapView } from './views/tree-map-view';
 import { MedicalHistoryView } from './views/medical-history-view';
 import { VisitsView } from './views/visits-view';
-import { VisitsViewHelper } from './helpers/visits-view-helper';
-import { GridCell, TableView } from 'datagrok-api/dg';
-import { addEmitHelper } from 'typescript';
-import { PatientVisit } from './model/patient-visit';
-import { dictToString } from './data-preparation/utils';
 
 export let _package = new DG.Package();
 
@@ -134,7 +127,7 @@ export async function clinicalCaseApp(): Promise<any> {
   let c: DG.FuncCall = grok.functions.getCurrentCall();
   validationRulesList = await grok.data.loadTable(`${_package.webRoot}tables/validation-rules.csv`);
 
-  if (Object.keys(meta.domains).every((name) => grok.shell.table(name) == null)) {
+  if (Object.keys(study.domains).every((name) => grok.shell.table(name) == null)) {
     let demoFiles = await grok.dapi.projects.filter('clin-demo-files-2').list();
     if (demoFiles.length) {
       await grok.dapi.projects.open('clin-demo-files-2');
@@ -154,8 +147,8 @@ export async function clinicalCaseApp(): Promise<any> {
   }
 
   function createTableView(
-    requiredDomains: string [], 
-    columnsToCheck: any, 
+    requiredDomains: string[],
+    columnsToCheck: any,
     domainsToCheck: any,
     viewName: string,
     helpUrl: string,
@@ -178,7 +171,7 @@ export async function clinicalCaseApp(): Promise<any> {
     if (helpUrl) {
       tableView.helpUrl = helpUrl;
     }
-    return {helper: viewHelper, view: tableView};
+    return { helper: viewHelper, view: tableView };
   }
 
   function createAEBrowserHelper(timelinesView: TimelinesView): any {
@@ -188,14 +181,9 @@ export async function clinicalCaseApp(): Promise<any> {
     aeBrowserDf.onCurrentRowChanged.subscribe(() => {
       aeBrowserHelper.currentSubjId = aeBrowserDf.get(SUBJECT_ID, aeBrowserDf.currentRowIdx);
       aeBrowserHelper.currentAeDay = aeBrowserDf.get(AE_START_DAY, aeBrowserDf.currentRowIdx);
-      aeBrowserHelper.createAEBrowserPanel();
+      aeBrowserHelper.propertyPanel();
     })
-    return {helper: aeBrowserHelper, df: aeBrowserDf};
-  }
-
-  function createVisitsViewHelper(): any {
-    const visitsViewHelper = new VisitsViewHelper();
-    return {helper: visitsViewHelper, df: visitsViewHelper.pivotedSv};
+    return { helper: aeBrowserHelper, df: aeBrowserDf };
   }
 
   const views = [];
@@ -206,7 +194,7 @@ export async function clinicalCaseApp(): Promise<any> {
   views.push(<PatientProfileView>addView(new PatientProfileView('Patient Profile')));
   views.push(<AdverseEventsView>addView(new AdverseEventsView('Adverse Events')));
   views.push(<LaboratoryView>addView(new LaboratoryView('Laboratory')));
-  //views.push(<AERiskAssessmentView>addView(new AERiskAssessmentView('AE Risk Assessment')));
+  views.push(<AERiskAssessmentView>addView(new AERiskAssessmentView('AE Risk Assessment')));
   views.push(<SurvivalAnalysisView>addView(new SurvivalAnalysisView('Survival Analysis')));
   views.push(<BoxPlotsView>addView(new BoxPlotsView('Distributions')));
   views.push(<MatrixesView>addView(new MatrixesView('Correlations')));
@@ -216,12 +204,12 @@ export async function clinicalCaseApp(): Promise<any> {
   views.push(<VisitsView>addView(new VisitsView('Visits')));
 
   const aeBrowserView = createTableView(
-    ['ae'], 
-    { 'ae': { 'req': [AE_TERM, AE_SEVERITY, AE_START_DAY, AE_END_DAY] } },
+    ['ae'],
+    { 'ae': { 'req': [AE_TERM, AE_START_DAY, AE_END_DAY] } },
     {
       'req_domains': {
         'ae': {
-          'req': [AE_TERM, AE_SEVERITY, AE_START_DAY, AE_END_DAY]
+          'req': [AE_TERM, AE_START_DAY, AE_END_DAY]
         }
       }
     },
@@ -236,7 +224,6 @@ export async function clinicalCaseApp(): Promise<any> {
 
   let summary = views.find(it => it.name === 'Summary');
   summary.load();
-  summary.loaded = true;
   let valView = addView(new ValidationView(summary.errorsByDomain, 'Validation'));
   summary.validationView = valView;
   views.push(valView);
@@ -244,6 +231,10 @@ export async function clinicalCaseApp(): Promise<any> {
   setTimeout(() => {
     grok.shell.v = summary;
   }, 1000);
+
+  let setObj = async (obj) => {
+    grok.shell.o = await obj.propertyPanel();
+  }
 
   grok.events.onCurrentViewChanged.subscribe((v) => {
     setTimeout(() => {
@@ -253,7 +244,7 @@ export async function clinicalCaseApp(): Promise<any> {
           obj.load();
         }
         if (obj.loaded) {
-        createPropertyPanel(obj);
+          setObj(obj);
         }
       }
     }, 100)
@@ -277,7 +268,8 @@ export async function clinicalCaseFolderLauncher(folder: DG.FileInfo, files: DG.
       ui.button('Run ClinicalCase', async () => {
         await Promise.all(files.map(async (file) => {
           if(domains.includes(file.fileName.toLowerCase())){
-            await grok.data.files.openTable(`${folder.fullPath}/${file.fileName.toLowerCase()}`);
+            const df = await grok.data.files.openTable(`${folder.fullPath}/${file.fileName.toLowerCase()}`);
+            grok.shell.addTableView(df);
           }
         }));
         grok.functions.call("Clinicalcase:clinicalCaseApp");

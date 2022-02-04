@@ -5,16 +5,16 @@ import * as DG from 'datagrok-api/dg';
 
 import {
   AlignedSequenceCellRenderer,
+  AlignedSequenceDifferenceCellRenderer,
   AminoAcidsCellRenderer,
 } from './utils/cell-renderer';
 import {Logo} from './viewers/logo-viewer';
 import {StackedBarChart} from './viewers/stacked-barchart-viewer';
-//import {MonomerLibrary} from './monomer-library';
 import {analyzePeptidesWidget} from './widgets/analyze-peptides';
 import {PeptideSimilaritySpaceWidget} from './utils/peptide-similarity-space';
 import {manualAlignmentWidget} from './widgets/manual-alignment';
 import {SARViewer, SARViewerVertical} from './viewers/sar-viewer';
-import {peptideMoleculeWidget, peptideToSMILES} from './widgets/peptide-molecule';
+import {peptideMoleculeWidget, getMolecule} from './widgets/peptide-molecule';
 import {SubstViewer} from './viewers/subst-viewer';
 import {runKalign} from './utils/multiple-sequence-alignment';
 import {calcDescriptors} from './utils/rdkit-descriptors';
@@ -39,14 +39,11 @@ async function main(chosenFile: string) {
   pi.close();
 }
 
-//name: Peptides App
+//name: Peptides
 //tags: app
 export async function Peptides() {
   const wikiLink = ui.link('wiki', 'https://github.com/datagrok-ai/public/blob/master/help/domains/bio/peptides.md');
   const textLink = ui.inlineText(['For more details, see our ', wikiLink, '.']);
-
-  //const sdf = await _package.files.readAsText(`HELMMonomers_June10.sdf`);
-  //const lib = new MonomerLibrary(sdf);
 
   const appDescription = ui.info(
     [
@@ -88,9 +85,9 @@ export async function Peptides() {
 //input: column col {semType: alignedSequence}
 //output: widget result
 export async function peptidesPanel(col: DG.Column): Promise<DG.Widget> {
-  if (col.getTag('isAnalysisApplicable') === 'false') {
+  if (col.getTag('isAnalysisApplicable') === 'false')
     return new DG.Widget(ui.divText('Analysis is not applicable'));
-  }
+
   view = (grok.shell.v as DG.TableView);
   tableGrid = view.grid;
   currentDf = col.dataFrame;
@@ -140,6 +137,15 @@ export async function peptideMolecule(peptide: string): Promise<DG.Widget> {
   return await peptideMoleculeWidget(peptide);
 }
 
+//name: Peptide Molecule
+//tags: panel, widgets
+//input: string aar {semType: aminoAcids}
+//output: widget result
+export async function peptideMolecule2(aar: string): Promise<DG.Widget> {
+  const peptide = alignedSequenceCol.get(currentDf.currentRowIdx);
+  return await peptideMolecule(peptide);
+}
+
 //name: StackedBarChartAA
 //tags: viewer
 //output: viewer result
@@ -175,6 +181,7 @@ export function logov() {
 //input: string monomer {semType: aminoAcids}
 //output: widget result
 export function manualAlignment(monomer: string) {
+  //TODO: recalculate Molfile and Molecule panels on sequence update
   return manualAlignmentWidget(alignedSequenceCol, currentDf);
 }
 
@@ -192,8 +199,17 @@ export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
 //input: string peptide { semType: alignedSequence }
 //output: widget result
 export async function peptideMolfile(peptide: string): Promise<DG.Widget> {
-  const smiles = peptideToSMILES(peptide);
+  const smiles = getMolecule(peptide);
   return await grok.functions.call('Chem:molfile', {'smiles': smiles});
+}
+
+//name: Molfile
+//tags: panel, widgets
+//input: string aar { semType: aminoAcids }
+//output: widget result
+export async function peptideMolfile2(aar: string): Promise<DG.Widget> {
+  const peptide = alignedSequenceCol.get(currentDf.currentRowIdx);
+  return await peptideMolfile(peptide);
 }
 
 //name: Multiple sequence alignment
@@ -232,3 +248,54 @@ export async function calcRDKitDescriptors(table: DG.DataFrame, col: DG.Column) 
   //table.rows.removeAt(0, 600);
   return calcRDKitDescriptors(table, table.getCol('AlignedSequence'));
 }*/
+//name: Substitution
+//tags: panel, widgets
+//input: dataframe table {semType: Substitution}
+//output: widget result
+export async function peptideSubstitution(table: DG.DataFrame): Promise<DG.Widget> {
+  if (!table)
+    return new DG.Widget(ui.label('No substitution'));
+
+  const peptideLength = 17;
+  const initialCol: DG.Column = table.columns.byName('Initial');
+  const substitutedCol: DG.Column = table.columns.byName('Substituted');
+  const substCounts = [];
+  let cnt = 0;
+
+  for (let i = 0; i < initialCol.length; ++i) {
+    const initialPeptide: string = initialCol.get(i);
+    const substPeptide: string = substitutedCol.get(i);
+    const concat = initialPeptide + '#' + substPeptide;
+
+    initialCol.set(i, concat);
+
+    const initialAminos = initialPeptide.split('-');
+    const substAminos = substPeptide.split('-');
+
+    for (let j = 0; j < peptideLength; ++j) {
+      if (initialAminos[j] != substAminos[j])
+        substCounts[cnt++] = j;
+    }
+  }
+
+  const countCol = DG.Column.fromInt32Array('substCounts', substCounts as unknown as Int32Array);
+  const df = DG.DataFrame.fromColumns([countCol]);
+  const barchart = df.plot.histogram({value: 'substCounts'});
+  if (barchart) {
+    barchart.root.style.width = '200px';
+    barchart.root.style.marginLeft = '30px';
+  }
+
+  initialCol.semType = 'alignedSequenceDifference';
+  initialCol.name = 'Substitution';
+  table.columns.remove('Substituted');
+  return new DG.Widget(ui.div([table.plot.grid().root]));
+}
+
+//name: alignedSequenceDifferenceCellRenderer
+//tags: cellRenderer, cellRenderer-alignedSequenceDifference
+//meta-cell-renderer-sem-type: alignedSequenceDifference
+//output: grid_cell_renderer result
+export function alignedSequenceDifferenceCellRenderer() {
+  return new AlignedSequenceDifferenceCellRenderer();
+}
