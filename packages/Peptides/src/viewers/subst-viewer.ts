@@ -38,12 +38,12 @@ export class SubstViewer extends DG.JsViewer {
     const df: DG.DataFrame = this.dataFrame!;
     const col: DG.Column = df.columns.bySemType('alignedSequence');
     // let values: number[] = df.columns.byName('IC50').toList();
-    const values = df.getCol(this.activityColumnName).toList();
+    const values: number[] = df.getCol(this.activityColumnName).toList();
     // values = values;
     const splitedMatrix = this.split(col);
 
     const tableValues: { [aar: string]: number[] } = {};
-    const tableTooltips: { [aar: string]: {[index: string]: string}[][] } = {};
+    const tableTooltips: { [aar: string]: {}[][] } = {};
     const tableCases: { [aar: string]: number[][][] } = {};
 
     const nRows = splitedMatrix.length;
@@ -53,8 +53,8 @@ export class SubstViewer extends DG.JsViewer {
     for (let i = 0; i < nRows - 1; i++) {
       for (let j = i + 1; j < nRows; j++) {
         let substCounter = 0;
-        const subst1: { [pos: number]: [string, {[index: string]: string}] } = {};
-        const subst2: { [pos: number]: [string, {[index: string]: string}] } = {};
+        const subst1: { [pos: number]: [string, {}] } = {};
+        const subst2: { [pos: number]: [string, {}] } = {};
         const delta = values[i] - values[j];
 
         for (let k = 0; k < nCols; k++) {
@@ -66,59 +66,50 @@ export class SubstViewer extends DG.JsViewer {
             substCounter++;
             subst1[k] = [
               smik,
-              {key: `${smik === '-' ? 'Empty' : smik} → ${smjk === '-' ? 'Empty' : smjk}`, value: `${vi} → ${vj}`},
+              {
+                key: `${smik === '-' ? 'Empty' : smik} → ${smjk === '-' ? 'Empty' : smjk}`, 
+                value: `${vi} → ${vj}`,
+                diff: values[j] - values[i],
+              },
             ];
             subst2[k] = [
               smjk,
-              {key: `${smjk === '-' ? 'Empty' : smjk} → ${smik === '-' ? 'Empty' : smik}`, value: `${vj} → ${vi}`},
+              {
+                key: `${smjk === '-' ? 'Empty' : smjk} → ${smik === '-' ? 'Empty' : smik}`, 
+                value: `${vj} → ${vi}`,
+                diff: values[i] - values[j],
+              },
             ];
           }
         }
 
         if (substCounter <= this.maxSubstitutions && substCounter > 0) {
-          Object.keys(subst1).forEach((pos) => {
-            const posInt = parseInt(pos);
-            const aar = subst1[posInt][0];
-            if (!Object.keys(tableValues).includes(aar)) {
-              tableValues[aar] = Array.apply(null, nColsArray).map(function() {
-                return DG.INT_NULL;
-              });
-              tableTooltips[aar] = Array.apply(null, nColsArray).map(function() {
-                return [];
-              });
-              tableCases[aar] = Array.apply(null, nColsArray).map(function() {
-                return [];
-              });
-            }
+          for (const subst of [subst1, subst2]) {
+            Object.keys(subst).forEach((pos) => {
+              const posInt = parseInt(pos);
+              const aar = subst[posInt][0];
+              if (!Object.keys(tableValues).includes(aar)) {
+                tableValues[aar] = Array.apply(null, nColsArray).map(function() {
+                  return DG.INT_NULL;
+                });
+                tableTooltips[aar] = Array.apply(null, nColsArray).map(function() {
+                  return [];
+                });
+                tableCases[aar] = Array.apply(null, nColsArray).map(function() {
+                  return [];
+                });
+              }
 
-            tableValues[aar][posInt] = tableValues[aar][posInt] === DG.INT_NULL ? 1 : tableValues[aar][posInt] + 1;
-            tableTooltips[aar][posInt] = !tableTooltips[aar][posInt].length ?
-              [{key: 'Substitution', value: 'Values'}] : tableTooltips[aar][posInt];
-            tableTooltips[aar][posInt].push(subst1[posInt][1]);
-            tableCases[aar][posInt].push([i, j, delta]);
-          });
-          Object.keys(subst2).forEach((pos) => {
-            const posInt = parseInt(pos);
-            const aar = subst2[posInt][0];
-            if (!Object.keys(tableValues).includes(aar)) {
-              tableValues[aar] = Array.apply(null, nColsArray).map(function() {
-                return DG.INT_NULL;
-              });
-              tableTooltips[aar] = Array.apply(null, nColsArray).map(function() {
-                return [];
-              });
-              tableCases[aar] = Array.apply(null, nColsArray).map(function() {
-                return [];
-              });
-            }
-
-            tableValues[aar][posInt] = tableValues[aar][posInt] === DG.INT_NULL ? 1 : tableValues[aar][posInt] + 1;
-            // tableValues[aar][posInt]++;
-            tableTooltips[aar][posInt] = !tableTooltips[aar][posInt].length ?
-              [{key: 'Substitution', value: 'Values'}] : tableTooltips[aar][posInt];
-            tableTooltips[aar][posInt].push(subst2[posInt][1]);
-            tableCases[aar][posInt].push([j, i, -delta]);
-          });
+              tableValues[aar][posInt] = tableValues[aar][posInt] === DG.INT_NULL ? 1 : tableValues[aar][posInt] + 1;
+              tableTooltips[aar][posInt] = !tableTooltips[aar][posInt].length ?
+                [{key: 'Substitution', value: 'Values'}] : tableTooltips[aar][posInt];
+              tableTooltips[aar][posInt].push(subst[posInt][1]);
+              if (subst == subst1)
+                tableCases[aar][posInt].push([i, j, delta]);
+              else 
+                tableCases[aar][posInt].push([j, i, -delta]);
+            });
+          }
         }
       }
     }
@@ -153,10 +144,39 @@ export class SubstViewer extends DG.JsViewer {
           if (colName !== aarColName) {
             const aar = this.viewerGrid!.table.get(aarColName, gCell.tableRowIndex);
             const pos = parseInt(colName);
-            const tooltipText = tableTooltips[aar][pos].length ?
-              DG.HtmlTable.create(
-                tableTooltips[aar][pos], (item: {[index: string]: string}, idx: number) => [item.key, item.value],
-              ).root : ui.divText('No substitutions');
+            const lengthTableTooltip = tableTooltips[aar][pos].length;
+            const sortedTableTooltips = [];
+            const resTooltip: {[index: string]: string}[] = [];
+            let tooltipText: any = ui.divText('No substitutions');
+            let haveEllipsis = false;
+
+            if (lengthTableTooltip) {
+              const mn = Math.min(5, lengthTableTooltip);
+              for (let i = 0; i < lengthTableTooltip; ++i) {
+                const val: {[key: string]: any} = tableTooltips[aar][pos][i];
+                sortedTableTooltips.push([i, val['diff'], val]);
+              }
+              sortedTableTooltips.sort(function(a, b) {
+                return b[1] - a[1];
+              });
+              for (let i = 0; i < mn; ++i) {
+                const idx = sortedTableTooltips[i][0];
+                resTooltip.push(tableTooltips[aar][pos][idx]);
+              }
+              if (lengthTableTooltip > mn) {
+                for (let i = Math.max(lengthTableTooltip - mn, mn); i < lengthTableTooltip; ++i) {
+                  const idx = sortedTableTooltips[i][0];
+                  if (lengthTableTooltip > 2 * mn && !haveEllipsis) {
+                    haveEllipsis = true;
+                    resTooltip.push({key: '...', value: '...'});
+                  }
+                  resTooltip.push(tableTooltips[aar][pos][idx]);
+                }
+              }
+              tooltipText = DG.HtmlTable.create(
+                resTooltip, (item: {[index: string]: string}, idx: number) => [item.key, item.value],
+              ).root;
+            }
             ui.tooltip.show(tooltipText, x, y);
           }
         }

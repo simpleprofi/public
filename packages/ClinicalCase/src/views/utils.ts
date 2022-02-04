@@ -51,7 +51,7 @@ export function checkMissingDomains(requiredDomainsAndCols: any, obj: any) {
     const errorsDiv = ui.divV([], { style: { margin: 'auto', textAlign: 'center' } });
     createMissingDataDiv(errorsDiv, totalMissingDomains, 'Missing domains:');
     checkMissingColumns(errorsDiv, reqDomains.concat(optDomains), requiredColumns);
-    obj.root.append(errorsDiv);
+    updateDivInnerHTML(obj.root, errorsDiv);
   }
 }
 
@@ -76,7 +76,7 @@ export function checkMissingColumns(obj: any, reqDomains: string[], requiredDoma
   return noMissingCols;
 }
 
-function createMissingDataDiv(div: HTMLDivElement, missingDomainsOrCols: string[], header: string){
+export function createMissingDataDiv(div: HTMLDivElement, missingDomainsOrCols: string[], header: string){
   let domainsDiv = ui.div();
   missingDomainsOrCols.forEach(it => {domainsDiv.append(ui.divText(it))})
   div.append(ui.div([

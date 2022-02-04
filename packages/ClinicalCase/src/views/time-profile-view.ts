@@ -2,7 +2,7 @@ import * as grok from 'datagrok-api/grok';
 import * as DG from "datagrok-api/dg";
 import * as ui from "datagrok-api/ui";
 import { study } from "../clinical-study";
-import { addDataFromDmDomain, createPivotedDataframe, getUniqueValues, getVisitNamesAndDays } from '../data-preparation/utils';
+import { addDataFromDmDomain, convertColToString, createPivotedDataframe, createPivotedDataframeAvg, getUniqueValues, getVisitNamesAndDays } from '../data-preparation/utils';
 import { ETHNIC, LAB_RES_N, LAB_TEST, VISIT_DAY, VISIT_NAME, RACE, SEX, SUBJECT_ID, TREATMENT_ARM, VS_TEST, VS_RES_N } from '../columns-constants';
 import { dynamicComparedToBaseline } from '../data-preparation/data-preparation';
 import { updateDivInnerHTML } from './utils';
@@ -41,7 +41,7 @@ export class TimeProfileView extends ClinicalCaseViewBase {
     }
 
     createView(): void {
-        this.splitBy = this.splitBy.filter(it => study.domains.dm.columns.names().includes(it));
+        this.splitBy = this.splitBy.filter(it => study.domains.dm && study.domains.dm.columns.names().includes(it));
         this.domains = this.domains.filter(it => study.domains[it] !== null);
         this.selectedDomain = this.domains[0];
         this.uniqueLabValues = Array.from(getUniqueValues(study.domains[this.selectedDomain], this.domainFields[this.selectedDomain]['test']));
@@ -80,7 +80,7 @@ export class TimeProfileView extends ClinicalCaseViewBase {
 
         this.root.className = 'grok-view ui-box';
         this.linechart = DG.Viewer.lineChart(this.laboratoryDataFrame, {
-            splitColumnName: this.splitBy[0],
+            splitColumnName: this.splitBy.length ? this.splitBy[0] : '',
             xColumnName: VISIT_DAY,
             yColumnNames: [`${this.selectedLabValue} avg(${this.domainFields[this.selectedDomain]['res']})`],
             whiskersType: 'Med | Q1, Q3'
@@ -105,11 +105,17 @@ export class TimeProfileView extends ClinicalCaseViewBase {
             case 'Values': {
                 this.createLaboratoryDataframe();
                 this.linechart.dataFrame = this.laboratoryDataFrame;
+                this.linechart.setOptions({
+                    yColumnNames: [`${this.selectedLabValue} avg(${this.domainFields[this.selectedDomain]['res']})`],
+                  });
                 break;
             }
             case 'Changes': {
                 this.createrelativeChangeFromBlDataframe();
                 this.linechart.dataFrame = this.relativeChangeFromBlDataFrame;
+                this.linechart.setOptions({
+                    yColumnNames: [`${this.selectedLabValue} avg(${this.domainFields[this.selectedDomain]['res']})`],
+                  });
                 break;
             }
             default: {
@@ -159,15 +165,19 @@ export class TimeProfileView extends ClinicalCaseViewBase {
 
     private createLaboratoryDataframe() {
         let df = this.filterDataFrameByDays(study.domains[this.selectedDomain].clone());
-        let dfWithArm = addDataFromDmDomain(df, study.domains.dm, [ SUBJECT_ID, VISIT_DAY, VISIT_NAME].concat(Object.values(this.domainFields[this.selectedDomain])), this.splitBy);
-        this.laboratoryDataFrame = createPivotedDataframe(dfWithArm, [ SUBJECT_ID, VISIT_DAY ], this.domainFields[this.selectedDomain]['test'], this.domainFields[this.selectedDomain]['res'], this.splitBy);
+        if (this.splitBy.length) {
+            df = addDataFromDmDomain(df, study.domains.dm, [ SUBJECT_ID, VISIT_DAY, VISIT_NAME].concat(Object.values(this.domainFields[this.selectedDomain])), this.splitBy);
+        }
+        this.laboratoryDataFrame = createPivotedDataframeAvg(df, [ SUBJECT_ID, VISIT_DAY ], this.domainFields[this.selectedDomain]['test'], this.domainFields[this.selectedDomain]['res'], this.splitBy);
     }
 
     private createrelativeChangeFromBlDataframe(){
         let df = this.filterDataFrameByDays(study.domains[this.selectedDomain].clone());
         dynamicComparedToBaseline(df, this.domainFields[this.selectedDomain]['test'], this.domainFields[this.selectedDomain]['res'], this.bl, VISIT_NAME, 'LAB_DYNAMIC_BL', true);
-        let dfWithArm = addDataFromDmDomain(df, study.domains.dm, [ SUBJECT_ID, VISIT_DAY, VISIT_NAME, this.domainFields[this.selectedDomain]['test'], this.domainFields[this.selectedDomain]['res'] ], this.splitBy);
-        this.relativeChangeFromBlDataFrame = createPivotedDataframe(dfWithArm, [ SUBJECT_ID, VISIT_DAY ], this.domainFields[this.selectedDomain]['test'], this.domainFields[this.selectedDomain]['res'], this.splitBy);
+        if (this.splitBy.length) {
+            df = addDataFromDmDomain(df, study.domains.dm, [ SUBJECT_ID, VISIT_DAY, VISIT_NAME, this.domainFields[this.selectedDomain]['test'], this.domainFields[this.selectedDomain]['res'] ], this.splitBy);
+        }
+        this.relativeChangeFromBlDataFrame = createPivotedDataframeAvg(df, [ SUBJECT_ID, VISIT_DAY ], this.domainFields[this.selectedDomain]['test'], this.domainFields[this.selectedDomain]['res'], this.splitBy);
     }
 
 

@@ -256,7 +256,7 @@ export async function multipleSequenceAlignment(col: DG.Column): Promise<DG.Data
 //output: widget result
 export async function peptideSubstitution(table: DG.DataFrame): Promise<DG.Widget> {
   if (!table)
-    return new DG.Widget(ui.label('No difference'));
+    return new DG.Widget(ui.label('No substitution'));
 
   const peptideLength = 17;
   const initialCol: DG.Column = table.columns.byName('Initial');
@@ -291,7 +291,7 @@ export async function peptideSubstitution(table: DG.DataFrame): Promise<DG.Widge
   initialCol.semType = 'alignedSequenceDifference';
   initialCol.name = 'Substitution';
   table.columns.remove('Substituted');
-  return new DG.Widget(ui.div([barchart?.root, table.plot.grid().root]));
+  return new DG.Widget(ui.div([table.plot.grid().root]));
 }
 
 //name: alignedSequenceDifferenceCellRenderer
