@@ -208,7 +208,7 @@ export function manualAlignment(monomer: string) {
 //input: column col {semType: alignedSequence}
 //output: widget result
 export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
-  const widget = await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: col});
+  const widget = await PeptideSimilaritySpaceViewer.create({alignedSequencesColumn: col!});
   return new DG.Widget(widget.root);
 }
 
@@ -218,7 +218,7 @@ export async function peptideSpacePanel(col: DG.Column): Promise<DG.Widget> {
 //output: viewer result
 export async function peptideSpace(): Promise<PeptideSimilaritySpaceViewer> {
   const col = (view.dataFrame.columns as DG.ColumnList).bySemType('alignedSequence');
-  return await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: col!});
+  return await PeptideSimilaritySpaceViewer.create({alignedSequencesColumn: col!});
 }
 
 //name: Molfile

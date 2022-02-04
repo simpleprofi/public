@@ -11,19 +11,17 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
   protected _method: string;
   protected _metrics: string;
   protected _cycles: number;
-  protected _initialized: boolean = false;
 
-  /** Creates an instance of PeptideSimilaritySpaceViewer. */
-  constructor() {
+  /**
+   * Creates an instance of PeptideSimilaritySpaceViewer.
+   * @param {PeptideSpaceDataOptions} opts Options to control dimensionality reduction.
+   */
+  constructor(opts: PeptideSpaceDataOptions) {
     super();
 
-    const emptyDF = DG.DataFrame.fromColumns([
-      DG.Column.fromList('double', '~X', [0]),
-      DG.Column.fromList('double', '~Y', [0]),
-    ]);
-
-    this._data = new PeptideSpaceData({});
-    this._viewer = DG.Viewer.scatterPlot(emptyDF);
+    this._data = new PeptideSpaceData(opts);
+    this._viewer = DG.Viewer.scatterPlot(this._data.currentTable);
+    this._viewer.setOptions(this._data.plotOptions);
 
     this._method = this.string(
       'Embedding method',
@@ -38,44 +36,28 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
     this._cycles = this.int('Cycles count', 100);
 
     this._inputs = this._drawInputs();
+    //this._viewer.onContextMenu.subscribe((menu) => menu.item('Foo', () => grok.shell.info('Foo!')));
   }
 
-  /** Initializes the viewer.
-  * @param {PeptideSpaceDataOptions} options Options for reducer calculations.
-  */
-  async init(options: PeptideSpaceDataOptions): Promise<PeptideSimilaritySpaceViewer> {
-    this._data.setOptions(options);
-    //this.root.removeChild(this._viewer.root);
-    this._viewer.dataFrame = this._data.currentTable;
-    //this._viewer = DG.Viewer.scatterPlot(this._data.currentTable);
-    //this.root.appendChild(this._viewer.root);
-    this._initialized = true;
-
-    await this._redraw();
-
-    this._viewer.setOptions(this._data.plotOptions);
-    //this.dataFrame?.fireValuesChanged();
-    //this._viewer.onContextMenu.subscribe((menu) => menu.item('Foo', () => grok.shell.info('Foo!')));
-    return this;
+  /**
+   * Create the viewer and asynchronously call dimensionality reduction part.
+   * @param {PeptideSpaceDataOptions} options Options to hand over to the reducer.
+   * @return {Promise<PeptideSimilaritySpaceViewer>} Viewer instance correctly set after the reduction.
+   */
+  static async create(options: PeptideSpaceDataOptions): Promise<PeptideSimilaritySpaceViewer> {
+    const self = new PeptideSimilaritySpaceViewer(options);
+    await self._redraw();
+    return self;
   }
 
   /** Make the viewer redraw. */
   protected async _redraw() {
-    if (!this._initialized) {
-      const detected = (this.dataFrame?.columns as DG.ColumnList).bySemType('alignedSequence');
-      this.init({alignedSequencesColumn: detected!});
-    }
-    await this._data?.init();
-    this._viewer?.dataFrame?.fireValuesChanged();
+    await this._data.init();
+    this._viewer.dataFrame?.fireValuesChanged();
   }
 
   /** Gets called when a table is attached to the viewer. */
   async onTableAttached() {
-    console.log(['onTableAttached', this.view, this.dataFrame, this.table]);
-    // eslint-disable-next-line max-len
-    // this.subs.push(DG.debounce(this.dataFrame!.selection.onChanged, 50).subscribe(async (_) => await this._redraw()));
-    // this.subs.push(DG.debounce(this.dataFrame!.filter.onChanged, 50).subscribe(async (_) => await this._redraw()));
-    // this.subs.push(DG.debounce(ui.onSizeChanged(this.root), 50).subscribe(async (_) => await this._redraw()));
     await this._redraw();
   }
 
@@ -85,7 +67,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
   protected _drawInputs(): HTMLElement {
     const methodsList = ui.choiceInput('Embedding method', this._data?.currentMethod, PeptideSpaceData.availableMethods,
       async (currentMethod: string) => {
-        this._data!.currentMethod = currentMethod;
+        this._data.currentMethod = currentMethod;
         await this._redraw();
       },
     );
@@ -93,7 +75,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
 
     const metricsList = ui.choiceInput('Distance metric', this._data?.currentMetrics, PeptideSpaceData.availableMetrics,
       async (currentMetrics: string) => {
-        this._data!.currentMetrics = currentMetrics;
+        this._data.currentMetrics = currentMetrics;
         await this._redraw();
       },
     );
@@ -101,7 +83,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
 
     const cyclesSlider = ui.intInput('Cycles count', this._data!.currentCycles,
       async (currentCycles: number) => {
-        this._data!.currentCycles = currentCycles;
+        this._data.currentCycles = currentCycles;
         await this._redraw();
       },
     );
@@ -112,11 +94,6 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
   /** Visual root.
    * @type {HTMLElement} */
   get root(): HTMLElement {
-    if (!this._viewer || !this._inputs)
-      return ui.divV([ui.divText('Was not initialized.')]);
-
-    console.log(['root', (this._viewer.dataFrame?.columns as DG.ColumnList).length]);
-
     this._viewer.root.style.width = 'auto';
     return ui.divV([this._viewer.root, this._inputs]);
   }
@@ -125,21 +102,18 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
    * @param {Property} property - or null, if multiple properties were changed. */
   async onPropertyChanged(property: DG.Property | null): Promise<void> {
     super.onPropertyChanged(property);
-    console.log(['onPropertyChanged', property]);
 
     if (!property)
       return;
 
     const value = property.get(this);
 
-    console.log(['property.get(this)', value, this]);
-
     if (property.name === 'Embedding method')
-      this._data!.currentMethod = value;
+      this._data.currentMethod = value;
     else if (property.name === 'Distance metrics')
-      this._data!.currentMetrics = value;
+      this._data.currentMetrics = value;
     else if (property.name === 'Cycles count')
-      this._data!.currentCycles = value;
+      this._data.currentCycles = value;
 
     await this._redraw();
   }
@@ -151,7 +125,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
   /** Subscribes on detach event to clone this into the TableView. */
   protected _addDetachedPatch() {
     this.onEvent('d4-viewer-detached').subscribe((args) => {
-      this._data?.reset();
+      this._data.reset();
     });
   }
 }

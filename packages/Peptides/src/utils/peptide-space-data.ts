@@ -13,7 +13,7 @@ import {Coordinates} from '@datagrok-libraries/utils/src/type-declarations';
  * @interface PeptideSpaceDataOptions
  */
 export interface PeptideSpaceDataOptions {
-    alignedSequencesColumn?: DG.Column;
+    alignedSequencesColumn: DG.Column;
     activityColumnName?: string;
     method?: string;
     metrics?: string;
@@ -48,12 +48,16 @@ export class PeptideSpaceData {
      * @param {PeptideSpaceDataOptions} options Options to control computations.
      */
     setOptions(options: PeptideSpaceDataOptions) {
-      this.alignedSequencesColumn = options.alignedSequencesColumn ?? PeptideSpaceData.emptyCol;
+      this.alignedSequencesColumn = options.alignedSequencesColumn;
       this.table = this.alignedSequencesColumn.dataFrame;
       this.activityColumnName = options.activityColumnName ?? inferActivityColumnsName(this.table) ?? '';
       this.method = options.method ?? PeptideSpaceData.availableMethods[0];
       this.metrics = options.metrics ?? PeptideSpaceData.availableMetrics[0];
       this.cycles = options.cycles ?? 100;
+    }
+
+    fastReduce(sequences: string[]) {
+      ;
     }
 
     /** Reduces dimensionality for given sequences.

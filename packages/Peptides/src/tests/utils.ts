@@ -28,7 +28,7 @@ export async function _testViewerIsDrawing(table: DG.DataFrame, alignedSequenceC
   let noException = true;
 
   try {
-    await (new PeptideSimilaritySpaceViewer()).init({alignedSequencesColumn: alignedSequenceColumn});
+    await PeptideSimilaritySpaceViewer.create({alignedSequencesColumn: alignedSequenceColumn});
   } catch (error) {
     noException = false;
   }
