@@ -143,7 +143,8 @@ export class Peptides {
         sarViewerVertical.helpUrl = helpUrl;
         const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
 
-        const peptideSpaceViewer = await PeptideSimilaritySpaceViewer.create(peptideSpaceOptions);
+        const peptideSpaceViewer = new PeptideSimilaritySpaceViewer(peptideSpaceOptions);
+        //await PeptideSimilaritySpaceViewer.create(peptideSpaceOptions);
         //const peptideSpaceViewer = view.addViewer('peptide-space-viewer');
         //peptideSpaceViewer.helpUrl = helpUrl;
         const psNode = view.dockManager.dock(
@@ -160,6 +161,8 @@ export class Peptides {
 
         $(switchViewers).removeClass('fa-toggle-off');
         $(switchViewers).addClass('fa-toggle-on');
+
+        await peptideSpaceViewer.update();
       } else {
         const substViewer = view.addViewer(
           'substitution-analysis-viewer', {'activityColumnName': activityColumnName},

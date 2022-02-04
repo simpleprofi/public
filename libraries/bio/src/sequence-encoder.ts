@@ -3,7 +3,7 @@ import {assert} from '@datagrok-libraries/utils/src/operations';
 type SideChainScale = {[name: string]: number};
 type SideChainScaleCollection = {[name: string]: SideChainScale};
 
-class SideChainScales {
+export class SideChainScales {
   static scales: SideChainScaleCollection = {
     // Wimley-White interfacial hydrophobicity scale
     'WimleyWhite': {

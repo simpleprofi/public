@@ -5,9 +5,10 @@ import {DimensionalityReducer} from '@datagrok-libraries/ml/src/reduce-dimension
 import {
   createDimensinalityReducingWorker,
 } from '@datagrok-libraries/ml/src/workers/dimensionality-reducing-worker-creator';
-import {AlignedSequenceEncoder} from '@datagrok-libraries/bio/src/sequence-encoder';
+import {AlignedSequenceEncoder, SideChainScales} from '@datagrok-libraries/bio/src/sequence-encoder';
 import {Measure, StringMetrics} from '@datagrok-libraries/ml/src/typed-metrics';
 import {Coordinates} from '@datagrok-libraries/utils/src/type-declarations';
+import {randomInt} from '@datagrok-libraries/utils/src/operations';
 
 /** Options to control dimensionality reducing calculations.
  * @interface PeptideSpaceDataOptions
@@ -54,10 +55,34 @@ export class PeptideSpaceData {
       this.method = options.method ?? PeptideSpaceData.availableMethods[0];
       this.metrics = options.metrics ?? PeptideSpaceData.availableMetrics[0];
       this.cycles = options.cycles ?? 100;
+      this._fastInit();
     }
 
-    fastReduce(sequences: string[]) {
-      ;
+    /** Reduces dimensionality for given sequences using a simple approach.
+     * @param {string[]} sequences Sequences to reduce.
+     * @return {DG.Column[]} Reduced coordinates.
+     * @memberof PeptideSpaceData
+     */
+    protected _fastReduce(sequences: string[]): DG.Column[] {
+      const embcols = simpleScaleEmbedding(sequences);
+      const columns = Array.from(
+        embcols as Coordinates,
+        (v: Float32Array, k) => (DG.Column.fromFloat32Array(PeptideSpaceData.axesNames[k], v)),
+      );
+      return columns;
+    }
+
+    /** Initializes coordinates and masses via fast approach. */
+    protected _fastInit() {
+      const sequences = cleanAlignedSequencesColumn(this.alignedSequencesColumn);
+      const columns = this._fastReduce(sequences);
+
+      columns.push(
+        DG.Column.fromFloat32Array(
+          PeptideSpaceData.axesNames[columns.length],
+          this._addMolweight(sequences),
+        ),
+      );
     }
 
     /** Reduces dimensionality for given sequences.
@@ -254,3 +279,42 @@ export function cleanAlignedSequencesColumn(col: DG.Column): Array<string> {
   return col.toList().map((v, _) => AlignedSequenceEncoder.clean(v));
 }
 
+/**
+ * Reduce sequences using a naive approach.
+ * @param {string[]} seqs Sequences to reduce.
+ * @return {Float32Array[]} Reduced sequences.
+ */
+function simpleScaleEmbedding(seqs: string[]): Float32Array[] {
+  const scale = SideChainScales.scales['WimleyWhite'];
+  const seqLen = seqs[0].length;
+  const seqsCount = seqs.length;
+  const pos = [randomInt(seqLen), randomInt(seqLen)];
+
+  while (pos[1] == pos[0])
+    pos[0] = randomInt(seqLen);
+
+  const coords = pos.map((v) => new Float32Array(seqsCount).fill(0).map((_, i) => (scale[seqs[i][v]])));
+  return coords;
+}
+
+// eslint-disable-next-line no-unused-vars
+function simpleScoreEmbedding(seqs: string[]) {
+  const scale = SideChainScales.scales['WimleyWhite'];
+  const seqLen = seqs[0].length;
+  const seqsCount = seqs.length;
+  const center = Math.round(seqLen / 2);
+  const pos = [randomInt(seqLen), randomInt(seqLen)];
+
+  while (pos[1] == pos[0])
+    pos[0] = randomInt(seqLen);
+
+  function score_(s: string, index: number): number {
+    let sum = 1;
+    for (const c of s.slice(index == 0 ? 0 : center, index == 0 ? center : -1))
+      sum *= scale[c] + 1;
+    return sum;
+  }
+
+  const coords = pos.map((v) => new Float32Array(seqsCount).fill(0).map((_, i) => (score_(seqs[i], i))));
+  return coords;
+}

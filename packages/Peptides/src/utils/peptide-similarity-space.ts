@@ -46,19 +46,19 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
    */
   static async create(options: PeptideSpaceDataOptions): Promise<PeptideSimilaritySpaceViewer> {
     const self = new PeptideSimilaritySpaceViewer(options);
-    await self._redraw();
+    await self.update();
     return self;
   }
 
   /** Make the viewer redraw. */
-  protected async _redraw() {
+  async update() {
     await this._data.init();
     this._viewer.dataFrame?.fireValuesChanged();
   }
 
   /** Gets called when a table is attached to the viewer. */
   async onTableAttached() {
-    await this._redraw();
+    await this.update();
   }
 
   /** Adds UI controls to change the behaviour of the viewer.
@@ -68,7 +68,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
     const methodsList = ui.choiceInput('Embedding method', this._data?.currentMethod, PeptideSpaceData.availableMethods,
       async (currentMethod: string) => {
         this._data.currentMethod = currentMethod;
-        await this._redraw();
+        await this.update();
       },
     );
     methodsList.setTooltip('Embedding method to apply to the dataset.');
@@ -76,7 +76,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
     const metricsList = ui.choiceInput('Distance metric', this._data?.currentMetrics, PeptideSpaceData.availableMetrics,
       async (currentMetrics: string) => {
         this._data.currentMetrics = currentMetrics;
-        await this._redraw();
+        await this.update();
       },
     );
     metricsList.setTooltip('Custom distance metric to pass to the embedding procedure.');
@@ -84,7 +84,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
     const cyclesSlider = ui.intInput('Cycles count', this._data!.currentCycles,
       async (currentCycles: number) => {
         this._data.currentCycles = currentCycles;
-        await this._redraw();
+        await this.update();
       },
     );
     cyclesSlider.setTooltip('Number of cycles affects the embedding quality.');
@@ -115,7 +115,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
     else if (property.name === 'Cycles count')
       this._data.currentCycles = value;
 
-    await this._redraw();
+    await this.update();
   }
 
   get viewer(): DG.ScatterPlotViewer {
