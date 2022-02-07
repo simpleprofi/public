@@ -170,18 +170,24 @@ function sequenceToSmiles(sequence: string) {
         MODIFICATIONS[codesList[i]].right :
         MODIFICATIONS[codesList[i]].left;
     } else {
-      smiles += (
-        links.includes(codesList[i]) ||
+      if (links.includes(codesList[i]) && i > 1 && !includesStandardLinkAlready.includes(codesList[i - 1]))
+        smiles = smiles.slice(0, smiles.length - stadardPhosphateLinkSmiles.length + 1);
+      else if (links.includes(codesList[i]) ||
         includesStandardLinkAlready.includes(codesList[i]) ||
         (i < codesList.length - 1 && (links.includes(codesList[i + 1]) || dropdowns.includes(codesList[i + 1])))
-      ) ?
-        obj[codesList[i]] :
-        obj[codesList[i]] + stadardPhosphateLinkSmiles;
+      )
+        smiles += obj[codesList[i]];
+      else
+        smiles += obj[codesList[i]] + stadardPhosphateLinkSmiles;
     }
   }
   smiles = smiles.replace(/OO/g, 'O');
   return (
-    links.includes(codesList[codesList.length - 1]) ||
+    (
+      links.includes(codesList[codesList.length - 1]) &&
+      codesList.length > 1 &&
+      !includesStandardLinkAlready.includes(codesList[codesList.length - 2])
+    ) ||
     dropdowns.includes(codesList[codesList.length - 1]) ||
     includesStandardLinkAlready.includes(codesList[codesList.length - 1])
   ) ?
