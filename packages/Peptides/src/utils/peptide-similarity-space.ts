@@ -21,7 +21,6 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
 
     this._data = new PeptideSpaceData(opts);
     this._viewer = DG.Viewer.scatterPlot(this._data.currentTable);
-    this._viewer.setOptions(this._data.plotOptions);
 
     this._method = this.string(
       'Embedding method',
@@ -47,6 +46,7 @@ export class PeptideSimilaritySpaceViewer extends DG.JsViewer {
   static async create(options: PeptideSpaceDataOptions): Promise<PeptideSimilaritySpaceViewer> {
     const self = new PeptideSimilaritySpaceViewer(options);
     await self.update();
+    self._viewer.setOptions(self._data.plotOptions());
     return self;
   }
 

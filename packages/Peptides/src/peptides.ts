@@ -3,8 +3,7 @@ import * as DG from 'datagrok-api/dg';
 import {addViewerToHeader} from './viewers/stacked-barchart-viewer';
 import {model} from './model';
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
-import {PeptideSimilaritySpaceViewer} from './utils/peptide-similarity-space';
-import {PeptideSpaceDataOptions} from './utils/peptide-space-data';
+import {PeptideSpaceData, PeptideSpaceDataOptions} from './utils/peptide-space-data';
 // import $ from 'cash-dom';
 
 /**
@@ -57,6 +56,12 @@ export class Peptides {
       activityColumnName: activityColumnName,
     };
 
+    const psData = new PeptideSpaceData(peptideSpaceOptions);
+
+    await psData.init(true); // [force = true] to ensure the previous call to the widget does not influence.
+
+    const psPlotoptions = psData.plotOptions();
+
     // const substViewer = view.addViewer(
     //   'substitution-analysis-viewer', {'activityColumnName': `${options['activityColumnName']}Scaled`},
     // );
@@ -74,11 +79,10 @@ export class Peptides {
     const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
     sarViewerVertical.helpUrl = helpUrl;
     const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
-    const peptideSpaceViewer = await PeptideSimilaritySpaceViewer.create(peptideSpaceOptions);
-    //const peptideSpaceViewer = view.addViewer('peptide-space-viewer');
-    //peptideSpaceViewer.helpUrl = helpUrl;
+    console.warn(psPlotoptions);
+    const peptideSpaceViewer = view.addViewer(DG.VIEWER.SCATTER_PLOT, psPlotoptions);
     const psNode = view.dockManager.dock(
-      peptideSpaceViewer.viewer,
+      peptideSpaceViewer,
       DG.DOCK_TYPE.LEFT,
       sarNode,
       'Peptide Space Viewer',
@@ -103,6 +107,8 @@ export class Peptides {
         if (!originalDfColumns.includes(colName))
           cols.remove(colName);
       }
+
+      psData.reset();
 
       currentDf.selection.setAll(false);
       currentDf.filter.setAll(true);
@@ -142,13 +148,10 @@ export class Peptides {
         const sarViewerVertical = view.addViewer('peptide-sar-viewer-vertical');
         sarViewerVertical.helpUrl = helpUrl;
         const sarVNode = view.dockManager.dock(sarViewerVertical, DG.DOCK_TYPE.RIGHT, sarNode, 'SAR Vertical Viewer');
-
-        const peptideSpaceViewer = new PeptideSimilaritySpaceViewer(peptideSpaceOptions);
-        //await PeptideSimilaritySpaceViewer.create(peptideSpaceOptions);
-        //const peptideSpaceViewer = view.addViewer('peptide-space-viewer');
-        //peptideSpaceViewer.helpUrl = helpUrl;
+        console.warn(psPlotoptions);
+        const peptideSpaceViewer = view.addViewer(DG.VIEWER.SCATTER_PLOT, psPlotoptions);
         const psNode = view.dockManager.dock(
-          peptideSpaceViewer.viewer,
+          peptideSpaceViewer,
           DG.DOCK_TYPE.LEFT,
           sarNode,
           'Peptide Space Viewer',
@@ -161,8 +164,6 @@ export class Peptides {
 
         $(switchViewers).removeClass('fa-toggle-off');
         $(switchViewers).addClass('fa-toggle-on');
-
-        await peptideSpaceViewer.update();
       } else {
         const substViewer = view.addViewer(
           'substitution-analysis-viewer', {'activityColumnName': activityColumnName},

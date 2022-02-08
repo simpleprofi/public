@@ -33,6 +33,8 @@ export function manualAlignmentWidget(alignedSequenceCol: DG.Column, currentDf: 
     grok.shell.o = temp;
 
     await Peptides.recalculate();
+
+    // TODO: add peptide space behaviour here.
   });
 
   const resetBtn = ui.button(

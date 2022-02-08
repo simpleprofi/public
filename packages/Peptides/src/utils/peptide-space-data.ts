@@ -172,16 +172,17 @@ export class PeptideSpaceData {
      * @param {boolean} [update=false]
      */
     protected _clearColumns(update: boolean = false) {
-      const columns = (this.table?.columns as DG.ColumnList);
+      const columns = (this.table.columns as DG.ColumnList);
 
       if (!columns)
         return;
 
       const axesNames = PeptideSpaceData.axesNames;
       const toConsider = update ? axesNames.slice(0, -1) : axesNames;
+      const names = columns.names();
 
       for (const name of toConsider) {
-        if (name in columns.names)
+        if (name in names)
           columns.remove(name);
       }
     }
@@ -199,6 +200,21 @@ export class PeptideSpaceData {
     protected _markUpdate() {
       this._clearColumns(true);
       this.needUpdate = true;
+    }
+
+    /**
+     * Returns options to control scatter plot visualization.
+     * @param {boolean} [title=false] Whether to add title to a scatter plot.
+     * @return {*} Scatter plot options.
+     */
+    plotOptions(title = false) {
+      return {
+        x: PeptideSpaceData.axesNames[0],
+        y: PeptideSpaceData.axesNames[1],
+        color: this.activityColumnName ?? PeptideSpaceData.axesNames[2],
+        size: PeptideSpaceData.axesNames[2],
+        title: title ? 'Peptide space' : undefined,
+      };
     }
 
     /** Returns current reducing method. */
@@ -243,16 +259,6 @@ export class PeptideSpaceData {
     /** Returns current table. */
     get currentTable() {
       return this.table;
-    }
-
-    /** Returns options to control scatter plot visualization. */
-    get plotOptions() {
-      return {
-        x: PeptideSpaceData.axesNames[0],
-        y: PeptideSpaceData.axesNames[1],
-        color: this.activityColumnName ?? PeptideSpaceData.axesNames[2],
-        size: PeptideSpaceData.axesNames[2],
-      };
     }
 }
 
