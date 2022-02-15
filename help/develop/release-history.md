@@ -1,6 +1,20 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-02-15 Dev build 0.125.3
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.125.3`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+
+
 # 2022-02-15 Dev build 0.125.1
 
 ## Latest Docker Images
