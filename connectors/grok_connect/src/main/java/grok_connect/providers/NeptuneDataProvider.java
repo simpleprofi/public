@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.Properties;
 
 public class NeptuneDataProvider extends JdbcDataProvider {
-    public NeptuneProvider(ProviderManager providerManager) {
+    public NeptuneDataProvider(ProviderManager providerManager) {
         super(providerManager);
         driverClassName = "software.aws.neptune.NeptuneDriver";
 //        software/aws/neptune/jdbc/Driver.class
