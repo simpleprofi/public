@@ -10,7 +10,7 @@ import grok_connect.utils.ProviderManager;
 import java.util.ArrayList;
 import java.util.Properties;
 
-public class NeptuneProvider extends JdbcDataProvider {
+public class NeptuneDataProvider extends JdbcDataProvider {
     public NeptuneProvider(ProviderManager providerManager) {
         super(providerManager);
         driverClassName = "software.aws.neptune.NeptuneDriver";
