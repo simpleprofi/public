@@ -1,0 +1,21 @@
+{
+  "func": {
+    "#type": "DataQuery",
+    "namespace": "AllUsers:",
+    "query": "select 1234567890",
+    "connection": {
+      "dataSource": "Neptune",
+      "credentials": {
+        "parameters": {
+          "accessKey": "___",
+          "secretAccessKey": "___"
+        }
+      },
+      "parameters": {
+        "connString": "jdbc:neptune:sqlgremlin://test-graph-env.cluster-c7mnalf61bno.us-east-1.neptune.amazonaws.com;port=8182"
+      },
+      "name": "RDDLHiveWithSA",
+      "friendlyName": "RDDL Hive with SA"
+    }
+  }
+}
