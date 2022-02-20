@@ -1,6 +1,24 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-02-21 Dev build 0.125.5
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.125.5`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Added Neptune 
+* Changed ProviderManager 
+* Changed NeptuneDataProvider 
+* Added pool without Hikari for Neptune 
+
+
 # 2022-02-17 Dev build 0.125.4
 
 ## Latest Docker Images
