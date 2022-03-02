@@ -2,8 +2,8 @@ import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
 import $ from 'cash-dom';
-import { map, individualBases, nearestNeighbour } from "./map";
-import { isValid, getAllCodesOfSynthesizer } from "./validation"
+import { map, individualBases, nearestNeighbour, TECHNOLOGIES } from "./map";
+import { isValidSequence, getAllCodesOfSynthesizer } from "./validation"
 
 export let _package = new DG.Package();
 
@@ -36,11 +36,11 @@ function saveAsCsv(table: DG.DataFrame): void {
   link.click();
 }
 
-function sortByStringLengthInDescendingOrder(array: string[]): string[] {
+export function sortByStringLengthInDescendingOrder(array: string[]): string[] {
   return array.sort(function(a, b) { return b.length - a.length; });
 }
 
-async function getOverhangModificationsDf(): Promise<DG.DataFrame> {
+export async function getOverhangModificationsDf(): Promise<DG.DataFrame> {
   let modifications: any[] = [];
   let entries = await grok.dapi.userDataStorage.get(STORAGE_NAME, CURRENT_USER);
   if (entries != null && Object.keys(entries).length == 0)
@@ -53,28 +53,9 @@ async function getOverhangModificationsDf(): Promise<DG.DataFrame> {
     DG.Column.fromStrings(OVERHANG_COL_NAMES.ABBREVIATION, modifications.map((e) => e.abbreviation)),    // @ts-ignore
     DG.Column.fromFloat32Array(OVERHANG_COL_NAMES.MOLECULAR_WEIGHT, modifications.map((e) => (e.molecularWeight == undefined) ? 0 : e.molecularWeight)),
     DG.Column.fromStrings(OVERHANG_COL_NAMES.BASE_MODIFICATION, modifications.map((e) => e.baseModification)),
-    DG.Column.fromStrings(OVERHANG_COL_NAMES.EXTINCTION_COEFFICIENT, modifications.map((e) => e.extinctionCoefficient)),
+    DG.Column.fromStrings(OVERHANG_COL_NAMES.EXTINCTION_COEFFICIENT, modifications.map((e) => String(e.extinctionCoefficient))),
     DG.Column.fromStrings(OVERHANG_COL_NAMES.ACTION, Array(modifications.length))
   ])!;
-}
-
-//name: Oligo Batch Calculator
-//input: string sequence
-//input: double amount
-//input: string outputUnits {choices: ['NMole', 'Milligrams', 'Micrograms', 'Optical Density']}
-//output: double opticalDensity
-//output: double nMole
-//output: double molecularMass
-//output: double molecularWeight
-//output: double extinctionCoefficient
-export function OligoBatchCalculator(sequence: string, amount: number, outputUnits: string) {
-  return {
-    opticalDensity: opticalDensity(sequence, amount, outputUnits),
-    nMole: nMole(sequence, amount, outputUnits),
-    molecularMass: molecularMass(sequence, amount, outputUnits),
-    molecularWeight: molecularWeight(sequence),
-    extinctionCoefficient: extinctionCoefficient(sequence)
-  };
 }
 
 //name: opticalDensity
@@ -82,13 +63,14 @@ export function OligoBatchCalculator(sequence: string, amount: number, outputUni
 //input: double amount
 //input: string outputUnits {choices: ['NMole', 'Milligrams', 'Micrograms']}
 //output: double opticalDensity
-export function opticalDensity(sequence: string, amount: number, outputUnits: string): number {
+export async function opticalDensity(sequence: string, amount: number, outputUnits: string, extinctionCoefficientsObj: {[index: string]: number}): Promise<number> {
+  let ec = await extinctionCoefficient(sequence, extinctionCoefficientsObj);
   if (outputUnits == 'Milligrams' || outputUnits == 'Micrograms' || outputUnits == 'mg' || outputUnits == 'µg')
-    return (outputUnits == 'Milligrams' ? 1 : 0.001) * amount * extinctionCoefficient(sequence) / molecularWeight(sequence);
+    return (outputUnits == 'Milligrams' ? 1 : 0.001) * amount * ec / molecularWeight(sequence);
   if (outputUnits == 'OD')
     return amount;
   const coefficient = (outputUnits == 'NMole') ? 1000000 : (outputUnits == 'Milligrams') ? 1 : 1000;
-  return amount * extinctionCoefficient(sequence) / coefficient;
+  return amount * ec / coefficient;
 }
 
 //name: nMole
@@ -96,8 +78,9 @@ export function opticalDensity(sequence: string, amount: number, outputUnits: st
 //input: double amount
 //input: string outputUnits {choices: ['Optical Density', 'Milligrams', 'Micrograms']}
 //output: double nMole
-export function nMole(sequence: string, amount: number, outputUnits: string): number {
-  return (outputUnits == 'Optical Density') ? 1000000 * amount / extinctionCoefficient(sequence) : 1000 * amount / molecularWeight(sequence);
+export async function nMole(sequence: string, amount: number, outputUnits: string, extinctionCoefficientsObj: {[index: string]: number}): Promise<number> {
+  let ec = await extinctionCoefficient(sequence, extinctionCoefficientsObj);
+  return (outputUnits == 'Optical Density') ? 1000000 * amount / ec : 1000 * amount / molecularWeight(sequence);
 }
 
 //name: molecularMass
@@ -105,20 +88,30 @@ export function nMole(sequence: string, amount: number, outputUnits: string): nu
 //input: double amount
 //input: string outputUnits {choices: ['Optical Density', 'Milligrams', 'Micromoles', 'Millimoles']}
 //output: double molecularMass
-export function molecularMass(sequence: string, amount: number, outputUnits: string): number {
-  if (outputUnits == 'Optical Density' || outputUnits == 'OD') {
-    let ec = extinctionCoefficient(sequence);
+export async function molecularMass(sequence: string, amount: number, outputUnits: string): Promise<number> {
+  let overhangModificationsDf = await getOverhangModificationsDf();
+  const overhangsAbbreviations = overhangModificationsDf.col(OVERHANG_COL_NAMES.ABBREVIATION)!.toList();
+  const extinctionCoefficients = overhangModificationsDf.col(OVERHANG_COL_NAMES.EXTINCTION_COEFFICIENT)!.toList();
+  const extinctionCoefficientsObj: {[index: string]: number} = {};
+  overhangsAbbreviations.forEach((key, i) => extinctionCoefficientsObj[key] = extinctionCoefficients[i]);
+  const ec = await extinctionCoefficient(sequence, extinctionCoefficientsObj);
+  const od = await opticalDensity(sequence, amount, outputUnits, extinctionCoefficientsObj);
+  const nm = await nMole(sequence, amount, outputUnits, extinctionCoefficientsObj);
+  if (outputUnits == 'Optical Density' || outputUnits == 'OD')
     return (ec == 0) ? amount * molecularWeight(sequence) : 1000 * amount * molecularWeight(sequence) / ec;
-  }
   const coefficient = (outputUnits == 'Milligrams' || outputUnits == 'Micromoles') ? 1 : 1000;
-  return amount / extinctionCoefficient(sequence) * molecularWeight(sequence) * coefficient * opticalDensity(sequence, amount, outputUnits) / nMole(sequence, amount, outputUnits);
+  return amount / ec * molecularWeight(sequence) * coefficient * od / nm;
 }
 
 //name: molecularWeight
 //input: string sequence
 //output: double molecularWeight
-export function molecularWeight(sequence: string): number {
-  const codes = sortByStringLengthInDescendingOrder(Object.keys(weightsObj));
+export function molecularWeight(sequence: string, overhangsWeightsObj?: {[index: string]: number}): number {
+  const codes = (overhangsWeightsObj == null) ?
+    sortByStringLengthInDescendingOrder(Object.keys(weightsObj)) :
+    sortByStringLengthInDescendingOrder(Object.keys(weightsObj).concat(Object.keys(overhangsWeightsObj)));
+  if (overhangsWeightsObj != null)
+    weightsObj = mergeOptions(weightsObj, overhangsWeightsObj);
   let weight = 0, i = 0;
   while (i < sequence.length) {
     let matchedCode = codes.find((s) => s == sequence.slice(i, i + s.length))!;
@@ -128,15 +121,31 @@ export function molecularWeight(sequence: string): number {
   return weight - 61.97;
 }
 
+function deleteWord(sequence: string, searchTerm: string): string {
+  let n = sequence.search(searchTerm);
+  while (sequence.search(searchTerm) > -1) {
+    n = sequence.search(searchTerm);
+    sequence = sequence.substring(0, n - 1) + sequence.substring(n + searchTerm.length - 1, sequence.length);
+  }
+  return sequence;
+}
+
 //name: extinctionCoefficient
 //input: string sequence
 //output: double extinctionCoefficient
-export function extinctionCoefficient(sequence: string): number {
-  let output = isValid(sequence);
-  sequence = normalizeSequence(sequence, output.expectedSynthesizer!);
-  let ec1 = 0, ec2 = 0;
+export async function extinctionCoefficient(sequence: string, extinctionCoefficientsObj?: {[index: string]: number}): Promise<number> {
+  let overhangModificationsDf = await getOverhangModificationsDf();
+  const overhangCodes = overhangModificationsDf.col(OVERHANG_COL_NAMES.ABBREVIATION)!.categories;
+  let output = isValidSequence(sequence, overhangCodes);
+  sequence = normalizeSequence(sequence, output.expectedSynthesizer, output.expectedTechnology);
+  let nearestNeighbourSum = 0, individualBasisSum = 0, modificationsSum = 0;
+  if (extinctionCoefficientsObj != null)
+    for (let modif of Object.keys(extinctionCoefficientsObj)) {
+      modificationsSum += (sequence.match(new RegExp(modif, 'g')) || []).length * extinctionCoefficientsObj[modif];
+      sequence = deleteWord(sequence, modif);
+    }
   for (let i = 0; i < sequence.length - 2; i += 2)
-    ec1 += (sequence[i] == sequence[i + 2]) ?
+    nearestNeighbourSum += (sequence[i] == sequence[i + 2]) ?
       nearestNeighbour[sequence.slice(i, i + 2)][sequence.slice(i + 2, i + 4)] :
       (
         nearestNeighbour['r' + ((sequence[i + 1] == 'T') ? 'U' : sequence[i + 1])]['r' + ((sequence[i + 3] == 'T') ? 'U' : sequence[i + 3])]
@@ -144,14 +153,17 @@ export function extinctionCoefficient(sequence: string): number {
         nearestNeighbour['d' + ((sequence[i + 1] == 'U') ? 'T' : sequence[i + 1])]['d' + ((sequence[i + 3] == 'U') ? 'T' : sequence[i + 3])]
       ) / 2;
   for (let i = 2; i < sequence.length - 2; i += 2)
-    ec2 += individualBases[sequence.slice(i, i + 2)];
-  return ec1 - ec2;
+    individualBasisSum += individualBases[sequence.slice(i, i + 2)];
+  return nearestNeighbourSum - individualBasisSum + modificationsSum;
 }
 
-function normalizeSequence(sequence: string, synthesizer: string): string {
-  const codes = sortByStringLengthInDescendingOrder(getAllCodesOfSynthesizer(synthesizer));
-  const re = new RegExp('(' + codes.join('|') + ')', 'g');
-  return sequence.replace(re, function (code) {return normalizedObj[code]});
+function normalizeSequence(sequence: string, synthesizer: string | null, technology: string | null): string {
+  const codes = (technology == null) ?
+    getAllCodesOfSynthesizer(synthesizer!) :
+    Object.keys(map[synthesizer!][technology]);
+  const sortedCodes = sortByStringLengthInDescendingOrder(codes);
+  const regExp = new RegExp('(' + sortedCodes.join('|') + ')', 'g');
+  return sequence.replace(regExp, function (code) { return normalizedObj[code] });
 }
 
 async function addModificationButton(modificationsDf: DG.DataFrame): Promise<void> {
@@ -268,10 +280,27 @@ function editOverhangModification(overhangModificationsDf: DG.DataFrame, rowInde
   });
 }
 
+function mergeOptions(obj1: {[index: string]: number}, obj2: {[index: string]: number}): {[index: string]: number} {
+  let obj3: {[index: string]: number} = {};
+  for (let attrname in obj1) { obj3[attrname] = obj1[attrname]; }
+  for (let attrname in obj2) { obj3[attrname] = obj2[attrname]; }
+  return obj3;
+}
+
 //name: Oligo Batch Calculator
 //tags: app
 export async function OligoBatchCalculatorApp(): Promise<void> {
-  function render(text: string): void {
+  let overhangModificationsDf = await getOverhangModificationsDf();
+  const overhangCodes = overhangModificationsDf.col(OVERHANG_COL_NAMES.ABBREVIATION)!.categories;
+  const overhangsAbbreviations = overhangModificationsDf.col(OVERHANG_COL_NAMES.ABBREVIATION)!.toList();
+  const overhangWeights = overhangModificationsDf.col(OVERHANG_COL_NAMES.MOLECULAR_WEIGHT)!.toList();
+  const extinctionCoefficients = overhangModificationsDf.col(OVERHANG_COL_NAMES.EXTINCTION_COEFFICIENT)!.toList();
+  const overhangsWeightsObj: {[index: string]: number} = {};
+  const extinctionCoefficientsObj: {[index: string]: number} = {};
+  overhangsAbbreviations.forEach((key, i) => overhangsWeightsObj[key] = overhangWeights[i]);
+  overhangsAbbreviations.forEach((key, i) => extinctionCoefficientsObj[key] = extinctionCoefficients[i]);
+
+  async function render(text: string): Promise<void> {
     gridDiv.innerHTML = '';
 
     let sequences = text.split('\n')
@@ -280,27 +309,26 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
 
     let indicesOfFirstNotValidCharacter = Array(sequences.length),
       normalizedSequences = Array(sequences.length),
-      molecularWeights = new Float32Array(sequences.length),
-      extinctionCoefficients = new Float32Array(sequences.length),
-      nMoles = new Float32Array(sequences.length),
-      opticalDensities = new Float32Array(sequences.length),
-      molecularMasses = new Float32Array(sequences.length),
-      reasonsOfError = Array(sequences.length),
-      expectedSynthesizers = Array(sequences.length);
+      molecularWeights = Array(sequences.length),
+      extinctionCoefficients = Array(sequences.length),
+      nMoles = Array(sequences.length),
+      opticalDensities = Array(sequences.length),
+      molecularMasses = Array(sequences.length),
+      reasonsOfError = Array(sequences.length);
 
-    sequences.forEach((sequence, i) => {
-      let output = isValid(sequence);
+    for (const sequence of sequences) {
+      let i = sequences.indexOf(sequence);
+      let output = isValidSequence(sequence, overhangCodes);
       indicesOfFirstNotValidCharacter[i] = output.indexOfFirstNotValidCharacter;
-      expectedSynthesizers[i] = output.expectedSynthesizer;
       if (indicesOfFirstNotValidCharacter[i] < 0) {
-        normalizedSequences[i] = normalizeSequence(sequence, expectedSynthesizers[i]);
+        normalizedSequences[i] = normalizeSequence(sequence, output.expectedSynthesizer, output.expectedTechnology);
         if (normalizedSequences[i].length > 2) {
           try {
-            molecularWeights[i] = molecularWeight(sequence);
-            extinctionCoefficients[i] = extinctionCoefficient(normalizedSequences[i]);
-            nMoles[i] = nMole(sequence, yieldAmount.value, units.value);
-            opticalDensities[i] = opticalDensity(sequence, yieldAmount.value, units.value);
-            molecularMasses[i] = molecularMass(sequence, yieldAmount.value, units.value);
+            molecularWeights[i] = molecularWeight(sequence, overhangsWeightsObj);
+            extinctionCoefficients[i] = await extinctionCoefficient(normalizedSequences[i], extinctionCoefficientsObj);
+            nMoles[i] = await nMole(sequence, yieldAmount.value, units.value, extinctionCoefficientsObj);
+            opticalDensities[i] = await opticalDensity(sequence, yieldAmount.value, units.value, extinctionCoefficientsObj);
+            molecularMasses[i] = await molecularMass(sequence, yieldAmount.value, units.value);
           } catch (e) {
             reasonsOfError[i] = 'Unknown error, please report it to Datagrok team';
             indicesOfFirstNotValidCharacter[i] = 0;
@@ -310,12 +338,14 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
           reasonsOfError[i] = 'Sequence should contain at least two nucleotides';
           indicesOfFirstNotValidCharacter[i] = 0;
         }
-      } else if (expectedSynthesizers[i] == null)
+      } else if (output.expectedSynthesizer == null)
         reasonsOfError[i] = "Not valid input";
-      else
-        reasonsOfError[i] = "Sequence is expected to be in synthesizer format '" +  expectedSynthesizers[i] +
+      else {
+        // paintColumn(output, asoGapmersGrid!, omeAndFluoroGrid!);
+        reasonsOfError[i] = "Sequence is expected to be in synthesizer '" +  output.expectedSynthesizer +
           "', please see table below to see list of valid codes";
-    });
+      }
+    }
 
     const moleName1 = (units.value == 'µmole' || units.value == 'mg') ? 'µmole' : 'nmole',
       moleName2 = (units.value == 'µmole') ? 'µmole' : 'nmole',
@@ -326,13 +356,13 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
       DG.Column.fromList('int', 'Item', Array(...Array(sequences.length + 1).keys()).slice(1)),
       DG.Column.fromStrings(NAME_OF_COLUMN_WITH_SEQUENCES, sequences),
       DG.Column.fromList('int', 'Length', normalizedSequences.map((s) => s.length / 2)),
-      DG.Column.fromFloat32Array('OD 260', opticalDensities),
-      DG.Column.fromFloat32Array(moleName1, nMoles),
-      DG.Column.fromFloat32Array('Mass (' + massName + ')', molecularMasses),
-      DG.Column.fromFloat32Array(moleName2 + '/OD', nMoles.map(function(n, i) {return coefficient * n / opticalDensities[i]})),
-      DG.Column.fromFloat32Array('µg/OD', molecularMasses.map(function(n, i) {return coefficient * n / opticalDensities[i]})),
-      DG.Column.fromFloat32Array('MW', molecularWeights),
-      DG.Column.fromFloat32Array('Ext. Coefficient', extinctionCoefficients)
+      DG.Column.fromList('double', 'OD 260', opticalDensities),
+      DG.Column.fromList('double', moleName1, nMoles),
+      DG.Column.fromList('double', 'Mass [' + massName + ']', molecularMasses),
+      DG.Column.fromList('double', moleName2 + '/OD', nMoles.map(function(n, i) {return coefficient * n / opticalDensities[i]})),
+      DG.Column.fromList('double', 'µg/OD', molecularMasses.map(function(n, i) {return coefficient * n / opticalDensities[i]})),
+      DG.Column.fromList('double', 'MW', molecularWeights),
+      DG.Column.fromList('double', 'Ext. Coefficient', extinctionCoefficients)
     ]);
 
     let grid = DG.Viewer.grid(table, { 'showRowHeader': false });
@@ -368,7 +398,7 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
   let yieldAmount = ui.floatInput('', 1, () => render(inputSequences.value));
   let units = ui.choiceInput('', 'OD', ['OD', 'µg', 'mg', 'µmole', 'nmole'], () => render(inputSequences.value));
 
-  render(defaultInput);
+  await render(defaultInput);
 
   let title = ui.panel([ui.h2('Oligo Properties')], 'ui-panel ui-box');
   title.style.maxHeight = '40px';
@@ -390,6 +420,8 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
     { Name: "rG", BioSpring: "", "Janssen GCRS": "rG", Weight: 345.21 },
     { Name: "rU", BioSpring: "", "Janssen GCRS": "rU", Weight: 306.17 }
   ]);
+  let asoGapmersGrid = DG.Viewer.grid(asoGapmersDf!, { showRowHeader: false, showCellTooltip: false });
+
   const omeAndFluoroDf = DG.DataFrame.fromObjects([
     { Name: "2'-fluoro-U", BioSpring: "1", Axolabs: "Uf", "Janssen GCRS": "fU", Weight: 308.16 },
     { Name: "2'-fluoro-A", BioSpring: "2", Axolabs: "Af", "Janssen GCRS": "fA", Weight: 331.2 },
@@ -401,7 +433,7 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
     { Name: "2'OMe-rG", BioSpring: "8", Axolabs: "g", "Janssen GCRS": "mG", Weight: 359.24 },
     { Name: "ps linkage", BioSpring: "*", Axolabs: "s", "Janssen GCRS": "ps", Weight: 16.07 }
   ]);
-  let overhangModificationsDf = await getOverhangModificationsDf();
+  let omeAndFluoroGrid = DG.Viewer.grid(omeAndFluoroDf!, { showRowHeader: false, showCellTooltip: false });
 
   let overhangModificationsGrid = DG.Viewer.grid(overhangModificationsDf, { showRowHeader: false, showCellTooltip: false });
   overhangModificationsGrid.col(OVERHANG_COL_NAMES.LONG_NAMES)!.width = 110;
@@ -409,6 +441,15 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
   overhangModificationsGrid.col(OVERHANG_COL_NAMES.MOLECULAR_WEIGHT)!.width = 105;
   overhangModificationsGrid.col(OVERHANG_COL_NAMES.BASE_MODIFICATION)!.width = 110;
   overhangModificationsGrid.col(OVERHANG_COL_NAMES.EXTINCTION_COEFFICIENT)!.width = 100;
+
+  const codesTablesDiv = ui.splitV([
+    ui.box(ui.h2('ASO Gapmers'), { style: {maxHeight: '40px'} }),
+    asoGapmersGrid.root,
+    ui.box(ui.h2("2'-OMe and 2'-F modifications"), { style: {maxHeight: '40px'} }),
+    omeAndFluoroGrid.root,
+    ui.box(ui.h2('Overhang modifications'), { style: {maxHeight: '40px'} }),
+    overhangModificationsGrid.root
+  ], { style: { maxWidth: '600px' } });
 
   let view = grok.shell.newView('Oligo Batch Calculator', [
     ui.splitH([
@@ -431,17 +472,15 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
           gridDiv
         ])
       ]),
-      ui.splitV([
-        ui.box(ui.h2('ASO Gapmers'), { style: {maxHeight: '40px'} }),
-        DG.Viewer.grid(asoGapmersDf!, { showRowHeader: false, showCellTooltip: false }).root,
-        ui.box(ui.h2("2'-OMe and 2'-F modifications"), { style: {maxHeight: '40px'} }),
-        DG.Viewer.grid(omeAndFluoroDf!, { showRowHeader: false, showCellTooltip: false }).root,
-        ui.box(ui.h2('Overhang modifications'), { style: {maxHeight: '40px'} }),
-        overhangModificationsGrid.root
-      ], { style: { maxWidth: '600px' } })
+      codesTablesDiv
     ])
   ]);
   view.box = true;
+
+  const switchInput = ui.switchInput('Codes', true, (v: boolean) => (v) ?
+    $(codesTablesDiv).show() :
+    $(codesTablesDiv).hide()
+  );
 
   let col = overhangModificationsGrid.col(OVERHANG_COL_NAMES.ACTION)!;
   col.cellType = 'html';
@@ -456,7 +495,8 @@ export async function OligoBatchCalculatorApp(): Promise<void> {
   view.setRibbonPanels([[
     ui.iconFA('redo', () => inputSequences.value = ''),
     ui.iconFA('plus', () => addModificationButton(overhangModificationsDf)),
-    ui.iconFA('arrow-to-bottom', () => saveAsCsv(table))
+    ui.iconFA('arrow-to-bottom', () => saveAsCsv(table)),
+    switchInput.root
   ]]);
 
   $('.inputSequence textarea')

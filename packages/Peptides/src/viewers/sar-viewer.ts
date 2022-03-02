@@ -4,7 +4,8 @@ import * as DG from 'datagrok-api/dg';
 
 import $ from 'cash-dom';
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
-import {PeptidesModel} from '../model';
+import {PeptidesController} from '../peptides';
+// import {PeptidesModel} from '../model';
 
 /**
  * Structure-activity relationship viewer.
@@ -27,10 +28,11 @@ export class SARViewer extends DG.JsViewer {
   protected _initialBitset: DG.BitSet | null;
   protected viewerVGrid: DG.Grid | null;
   protected currentBitset: DG.BitSet | null;
-  grouping: boolean;
-  groupMapping: StringDictionary | null;
-  model: PeptidesModel | null;
-  protected _name: string = 'Structure-Activity Relationship';
+  protected grouping: boolean;
+  protected groupMapping: StringDictionary | null;
+  // model: PeptidesModel | null;
+  protected _name: string = 'Monomer-Positions';
+  protected controller: PeptidesController | null;
   // protected pValueThreshold: number;
   // protected amountOfBestAARs: number;
   // duplicatesHandingMethod: string;
@@ -52,7 +54,8 @@ export class SARViewer extends DG.JsViewer {
     this._initialBitset = null;
     this.viewGridInitialized = false;
     this.currentBitset = null;
-    this.model = null;
+    // this.model = null;
+    this.controller = null;
 
     //TODO: find a way to restrict activityColumnName to accept only numerical columns (double even better)
     this.activityColumnName = this.string('activityColumnName');
@@ -74,20 +77,22 @@ export class SARViewer extends DG.JsViewer {
     this.initialized = true;
   }
 
-  onTableAttached() {
+  async onTableAttached() {
     this.sourceGrid = this.view?.grid ?? (grok.shell.v as DG.TableView).grid;
     this.dataFrame?.setTag('dataType', 'peptides');
-    this.model = PeptidesModel.getOrInit(this.dataFrame!);
+    this.controller = await PeptidesController.getInstance(this.dataFrame!);
+    // this.model = PeptidesModel.getOrInit(this.dataFrame!);
+    // this.model = this.controller.getOrInitModel();
 
-    this.subs.push(this.model.onStatsDataFrameChanged.subscribe((data) => this.statsDf = data));
-    this.subs.push(this.model.onSARGridChanged.subscribe((data) => {
+    this.subs.push(this.controller.onStatsDataFrameChanged.subscribe((data) => this.statsDf = data));
+    this.subs.push(this.controller.onSARGridChanged.subscribe((data) => {
       this.viewerGrid = data;
       this.render(false);
     }));
-    this.subs.push(this.model.onSARVGridChanged.subscribe((data) => this.viewerVGrid = data));
-    this.subs.push(this.model.onGroupMappingChanged.subscribe((data) => this.groupMapping = data));
+    this.subs.push(this.controller.onSARVGridChanged.subscribe((data) => this.viewerVGrid = data));
+    this.subs.push(this.controller.onGroupMappingChanged.subscribe((data) => this.groupMapping = data));
 
-    this.render();
+    await this.render();
   }
 
   detach() {
@@ -100,7 +105,7 @@ export class SARViewer extends DG.JsViewer {
    * @param {DG.Property} property New property.
    * @memberof SARViewer
    */
-  onPropertyChanged(property: DG.Property) {
+  async onPropertyChanged(property: DG.Property) {
     super.onPropertyChanged(property);
 
     if (!this.initialized) {
@@ -121,7 +126,7 @@ export class SARViewer extends DG.JsViewer {
       }
     }
 
-    this.render();
+    await this.render();
   }
 
   /**
@@ -137,7 +142,7 @@ export class SARViewer extends DG.JsViewer {
     //TODO: optimize. Don't calculate everything again if only view changes
     if (typeof this.dataFrame !== 'undefined' && this.activityColumnName && this.sourceGrid) {
       if (computeData) {
-        await this.model!.updateData(this.dataFrame, this.activityColumnName, this.scaling, this.sourceGrid,
+        await this.controller!.updateData(this.activityColumnName, this.scaling, this.sourceGrid,
           this.bidirectionalAnalysis, this._initialBitset, this.grouping);
       }
 
@@ -182,24 +187,26 @@ export class SARViewer extends DG.JsViewer {
  */
 export class SARViewerVertical extends DG.JsViewer {
   viewerVGrid: DG.Grid | null;
-  model: PeptidesModel | null;
+  // model: PeptidesModel | null;
   protected _name = 'Sequence-Activity relationship';
+  controller: PeptidesController | null;
 
   constructor() {
     super();
 
     this.viewerVGrid = null;
-    this.model = null;
+    this.controller = null;
   }
 
   get name() {
     return this._name;
   }
 
-  onTableAttached(): void {
-    this.model = PeptidesModel.getOrInit(this.dataFrame!);
+  async onTableAttached() {
+    // this.model = PeptidesModel.getOrInit(this.dataFrame!);
+    this.controller = await PeptidesController.getInstance(this.dataFrame!);
 
-    this.subs.push(this.model.onSARVGridChanged.subscribe((data) => {
+    this.subs.push(this.controller.onSARVGridChanged.subscribe((data) => {
       this.viewerVGrid = data;
       this.render();
     }));
@@ -219,10 +226,10 @@ function syncGridsFunc(sourceVertical: boolean, viewerGrid: DG.Grid, viewerVGrid
   if (viewerGrid && viewerGrid.dataFrame && viewerVGrid && viewerVGrid.dataFrame) {
     if (sourceVertical) {
       const dfCell = viewerVGrid.dataFrame.currentCell;
-      if (dfCell.column === null || dfCell.column.name !== 'Mean difference')
+      if (dfCell.column === null || dfCell.column.name !== 'Diff')
         return;
 
-      const otherColName: string = viewerVGrid.dataFrame.get('Position', dfCell.rowIndex);
+      const otherColName: string = viewerVGrid.dataFrame.get('Pos', dfCell.rowIndex);
       const otherRowName: string = viewerVGrid.dataFrame.get(aminoAcidResidue, dfCell.rowIndex);
       let otherRowIndex = -1;
       for (let i = 0; i < viewerGrid.dataFrame.rowCount; i++) {
@@ -244,14 +251,14 @@ function syncGridsFunc(sourceVertical: boolean, viewerGrid: DG.Grid, viewerVGrid
       for (let i = 0; i < viewerVGrid.dataFrame.rowCount; i++) {
         if (
           viewerVGrid.dataFrame.get(aminoAcidResidue, i) === otherAAR &&
-          viewerVGrid.dataFrame.get('Position', i) === otherPos
+          viewerVGrid.dataFrame.get('Pos', i) === otherPos
         ) {
           otherRowIndex = i;
           break;
         }
       }
       if (otherRowIndex !== -1)
-        viewerVGrid.dataFrame.currentCell = viewerVGrid.dataFrame.cell(otherRowIndex, 'Mean difference');
+        viewerVGrid.dataFrame.currentCell = viewerVGrid.dataFrame.cell(otherRowIndex, 'Diff');
     }
   }
 }
@@ -352,7 +359,7 @@ function accordionFunc(
 
         const tableMap: StringDictionary = {'Statistics:': ''};
         for (const colName of new Set(['Count', 'pValue', 'Mean difference'])) {
-          const query = `${aminoAcidResidue} = ${currentAAR} and Position = ${currentPosition}`;
+          const query = `${aminoAcidResidue} = ${currentAAR} and Pos = ${currentPosition}`;
           const textNum = statsDf.groupBy([colName]).where(query).aggregate().get(colName, 0);
           // const text = textNum === 0 ? '<0.01' : `${colName === 'Count' ? textNum : textNum.toFixed(2)}`;
           const text = colName === 'Count' ? `${textNum}` : textNum < 0.01 ? '<0.01' : textNum.toFixed(2);

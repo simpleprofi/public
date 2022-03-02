@@ -1,18 +1,17 @@
 import * as DG from 'datagrok-api/dg';
-import * as ui from 'datagrok-api/ui';
-import {ChemPalette} from '../utils/chem-palette';
 import * as rxjs from 'rxjs';
-const cp = new ChemPalette('grok');
+import * as ui from 'datagrok-api/ui';
+import {MonomerLibrary} from '../monomer-library';
+import {PeptidesController} from '../peptides';
 
 export function addViewerToHeader(grid: DG.Grid, barchart: StackedBarChart) {
   if (grid.temp['containsBarchart'])
     return;
 
-  // The following event makes the barchart interactive
-  rxjs.fromEvent<MouseEvent>(grid.overlay, 'mousemove').subscribe((mouseMove) => {
+  function eventAction(mouseMove: MouseEvent) {
     const cell = grid.hitTest(mouseMove.offsetX, mouseMove.offsetY);
     if (cell !== null && cell?.isColHeader && cell.tableColumn?.semType == 'aminoAcids')
-      barchart.highlight(cell, mouseMove.offsetX, mouseMove.offsetY);
+      barchart.highlight(cell, mouseMove.offsetX, mouseMove.offsetY, mouseMove);
     else
       return;
 
@@ -20,17 +19,11 @@ export function addViewerToHeader(grid: DG.Grid, barchart: StackedBarChart) {
       barchart.beginSelection(mouseMove);
     else
       barchart.unhighlight();
-  });
+  }
 
-  // rxjs.fromEvent<MouseEvent>(grid.overlay, 'click').subscribe(mm => {
-  //   const cell = grid.hitTest(mm.offsetX, mm.offsetY);
-  //   if (cell?.isColHeader && cell.tableColumn?.semType == 'aminoAcids') {
-  //     barchart.beginSelection(mm);
-  //     return;
-  //   }
-  //   barchart.unhighlight();
-  // });
-
+  // The following events makes the barchart interactive
+  rxjs.fromEvent<MouseEvent>(grid.overlay, 'mousemove').subscribe((mouseMove: MouseEvent) => eventAction(mouseMove));
+  rxjs.fromEvent<MouseEvent>(grid.overlay, 'click').subscribe((mouseMove: MouseEvent) => eventAction(mouseMove));
   rxjs.fromEvent<MouseEvent>(grid.overlay, 'mouseout').subscribe(() => barchart.unhighlight());
 
   barchart.tableCanvas = grid.canvas;
@@ -40,17 +33,18 @@ export function addViewerToHeader(grid: DG.Grid, barchart: StackedBarChart) {
 
   grid.onCellTooltip((cell, x, y) => {
     if (cell.tableColumn && ['aminoAcids', 'alignedSequence'].includes(cell.tableColumn.semType) ) {
-      if (!cell.isColHeader)
-        cp.showTooltip(cell, x, y);
-      else {
+      if (!cell.isColHeader) {
+        const monomerLib = cell.cell.dataFrame.temp[MonomerLibrary.id];
+        PeptidesController.chemPalette.showTooltip(cell, x, y, monomerLib);
+      } else {
         if (barchart.highlighted) {
           let elements: HTMLElement[] = [];
           elements = elements.concat([ui.divText(barchart.highlighted.aaName)]);
           ui.tooltip.show(ui.divV(elements), x, y);
         }
       }
-      return true;
     }
+    return true;
   });
 
   grid.onCellRender.subscribe((args) => {
@@ -73,333 +67,332 @@ export function addViewerToHeader(grid: DG.Grid, barchart: StackedBarChart) {
   });
 
   grid.temp['containsBarchart'] = true;
+  //FIXME: for some reason barchat didn't show when running analysis. This fixes it, but it's bad. Find a way to fix
+  // the problem
+  barchart.unhighlight();
 }
 
+type stackedBarChartDatatype = {
+  'name': string,
+  'data': {'name': string, 'count': number, 'selectedCount': number, 'fixedSelectedCount': number}[],
+}[];
+
+type bartStatsType = {
+  [Key: string]: {'name': string, 'count': number, 'selectedCount': number, 'fixedSelectedCount': number}[],
+};
 
 export class StackedBarChart extends DG.JsViewer {
-    public dataEmptyAA: string;
-    highlighted: {'colName' : string, 'aaName' : string} | null = null;
-    private ord: { [Key: string]: number; } = {};
-    private data: {'name': string, 'data': {'name': string, 'count': number, 'selectedCount': number}[]}[] = [];
-    private selectionMode: boolean = false;
-    public aminoColumnNames: string[] = [];
-    private aminoColumnIndices: {[Key: string]: number} = {};
-    private aggregatedTables: {[Key: string]: DG.DataFrame} = {};
-    private aggregatedTablesUnselected: {[Key: string]: DG.DataFrame} = {};
-    private max = 0;
-    private barStats: {[Key: string]: {'name': string, 'count': number, 'selectedCount': number}[]} = {};
-    private registered: {[Key: string]: DG.GridCell} = {};
-    tableCanvas: HTMLCanvasElement | undefined;
+  public dataEmptyAA: string;
+  public highlighted: {'colName' : string, 'aaName' : string} | null = null;
+  public tableCanvas: HTMLCanvasElement | undefined;
+  public aminoColumnNames: string[] = [];
+  private ord: { [Key: string]: number; } = {};
+  private aminoColumnIndices: {[Key: string]: number} = {};
+  private aggregatedTables: {[Key: string]: DG.DataFrame} = {};
+  private aggregatedHighlightedTables: {[Key: string]: DG.DataFrame} = {};
+  private max = 0;
+  private barStats:
+    {[Key: string]: {'name': string, 'count': number, 'highlightedCount': number, 'selectedCount': number}[]} = {};
+  private selected: {'colName' : string, 'aaName' : string}[] = [];
+  private highlightedMask: DG.BitSet | null = null;
+  private aggregatedSelectedTables: {[Key: string]: DG.DataFrame} = {};
 
-    constructor() {
-      super();
-      this.dataEmptyAA = this.string('dataEmptyAA', '-');
+  constructor() {
+    super();
+    this.dataEmptyAA = this.string('dataEmptyAA', '-');
+  }
+
+  init() {
+    const groups: {[key: string]: string[]} = {
+      'yellow': ['C', 'U'],
+      'red': ['G', 'P'],
+      'all_green': ['A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W'],
+      'light_blue': ['R', 'H', 'K'],
+      'dark_blue': ['D', 'E'],
+      'orange': ['S', 'T', 'N', 'Q'],
+    };
+    let i = 0;
+
+    for (const value of Object.values(groups)) {
+      for (const obj of value)
+        this.ord[obj] = i++;
     }
 
-    init(): void {
-      const groups: {[key: string]: string[]} = {
-        'yellow': ['C', 'U'],
-        'red': ['G', 'P'],
-        'all_green': ['A', 'V', 'I', 'L', 'M', 'F', 'Y', 'W'],
-        'light_blue': ['R', 'H', 'K'],
-        'dark_blue': ['D', 'E'],
-        'orange': ['S', 'T', 'N', 'Q'],
-      };
+    this.aminoColumnNames = [];
+  }
 
-      let i = 0;
-      for (const value of Object.values(groups)) {
-        i++;
-        for (const obj of value)
-          this.ord[obj] = i;
+  // Stream subscriptions
+  onTableAttached() {
+    this.init();
+    if (this.dataFrame) {
+      this.subs.push(DG.debounce(this.dataFrame.selection.onChanged, 50).subscribe((_) => this.computeData()));
+      this.subs.push(DG.debounce(this.dataFrame.filter.onChanged, 50).subscribe((_) => this.computeData()));
+      this.highlightedMask = DG.BitSet.create(this.dataFrame.rowCount);
+    }
+  }
+
+  // Cancel subscriptions when the viewer is detached
+  detach() {
+    this.subs.forEach((sub) => sub.unsubscribe());
+  }
+
+  computeData() {
+    this.aminoColumnNames = [];
+    this.aminoColumnIndices = {};
+
+    this.dataFrame!.columns.names().forEach((name: string) => {
+      if (this.dataFrame!.getCol(name).semType === 'aminoAcids' &&
+          !this.dataFrame!.getCol(name).categories.includes('COOH') &&
+          !this.dataFrame!.getCol(name).categories.includes('NH2')) {
+        this.aminoColumnIndices[name] = this.aminoColumnNames.length + 1;
+        this.aminoColumnNames.push(name);
       }
-      this.data = [];
-      this.aminoColumnNames = [];
-    }
+    });
 
-    // Stream subscriptions
-    onTableAttached(): void {
-      this.init();
-      if (this.dataFrame) {
-        this.subs.push(DG.debounce(this.dataFrame.selection.onChanged, 50).subscribe((_) => this.render()));
-        this.subs.push(DG.debounce(this.dataFrame.filter.onChanged, 50).subscribe((_) => this.render()));
-        this.subs.push(DG.debounce(this.dataFrame.onCurrentRowChanged, 50).subscribe((_) => this.render()));
-        this.subs.push(DG.debounce(ui.onSizeChanged(this.root), 50).subscribe((_) => this.render(false)));
-        this.computeData(this.dataFrame);
-      }
-    }
+    this.aggregatedTables = {};
+    this.aggregatedHighlightedTables = {};
+    this.aggregatedSelectedTables = {};
+    //TODO: optimize it, why store so many tables?
+    this.aminoColumnNames.forEach((name) => {
+      this.aggregatedTables[name] = this.dataFrame!
+        .groupBy([name])
+        .whereRowMask(this.dataFrame!.filter)
+        .add('count', name, `${name}_count`)
+        .aggregate();
 
-    // Cancel subscriptions when the viewer is detached
-    detach(): void {
-      this.subs.forEach((sub) => sub.unsubscribe());
-    }
+      this.aggregatedHighlightedTables[name] = this.dataFrame!
+        .groupBy([name])
+        .whereRowMask(this.highlightedMask!)
+        .add('count', name, `${name}_count`)
+        .aggregate();
 
-    computeData(df: DG.DataFrame): void {
-      this.data = [];
-      this.aminoColumnNames = [];
-      this.aminoColumnIndices = {};
+      this.aggregatedSelectedTables[name] = this.dataFrame!
+        .groupBy([name])
+        .whereRowMask(this.dataFrame!.selection)
+        .add('count', name, `${name}_count`)
+        .aggregate();
+    });
 
-      df.columns.names().forEach((name: string) => {
-        if (df.getCol(name).semType === 'aminoAcids' &&
-            !df.getCol(name).categories.includes('COOH') &&
-            !df.getCol(name).categories.includes('NH2')) {
-          this.aminoColumnIndices[name] = this.aminoColumnNames.length + 1;
-          this.aminoColumnNames.push(name);
-        }
-      });
+    this.barStats = {};
 
-      function getSelectedFilteredBuffer(df: DG.DataFrame) {
-        const buf1 = df.selection.getBuffer();
-        const buf2 = df.filter.getBuffer();
-        const resbuf = new Int32Array(buf1.length);
+    for (const [name, df] of Object.entries(this.aggregatedTables)) {
+      const colObj: {
+        'name': string,
+        'data': { 'name': string, 'count': number, 'highlightedCount': number, 'selectedCount': number}[],
+      } = {'name': name, 'data': []};
+      const aminoCol = df.getCol(name);
+      const aminoCountCol = df.getCol(`${name}_count`);
+      this.barStats[colObj['name']] = colObj['data'];
 
-        for (let i = 0; i < buf2.length; i++)
-          resbuf[i] = buf1[i] & buf2[i];
+      for (let i = 0; i < df.rowCount; i++) {
+        const amino = aminoCol.get(i);
+        const aminoCount = aminoCountCol.get(i);
+        const aminoObj = {'name': amino, 'count': aminoCount, 'highlightedCount': 0, 'selectedCount': 0};
+        const aggHighlightedAminoCol = this.aggregatedHighlightedTables[name].getCol(`${name}`);
+        const aggHighlightedCountCol = this.aggregatedHighlightedTables[name].getCol(`${name}_count`);
+        const aggSelectedAminoCol = this.aggregatedSelectedTables[name].getCol(`${name}`);
+        const aggSelectedCountCol = this.aggregatedSelectedTables[name].getCol(`${name}_count`);
 
-        return resbuf.buffer;
-      }
+        if (!amino || amino === this.dataEmptyAA)
+          continue;
 
-      this.aggregatedTables = {};
-      this.aggregatedTablesUnselected = {};
-      //TODO: optimize it, why store so many tables?
-      const mask = DG.BitSet.fromBytes(getSelectedFilteredBuffer(df), df.rowCount);
-      this.selectionMode = mask.trueCount !== df.filter.trueCount;
-      this.aminoColumnNames.forEach((name) => {
-        this.aggregatedTables[name] = df
-          .groupBy([name])
-          .whereRowMask(df.filter)
-          .add('count', name, `${name}_count`)
-          .aggregate();
+        colObj['data'].push(aminoObj);
 
-        if (mask.trueCount !== df.filter.trueCount) {
-          const aggregatedMask = DG.BitSet.fromBytes(getSelectedFilteredBuffer(df), df.rowCount);
-          this.aggregatedTablesUnselected[name] = df
-            .groupBy([name])
-            .whereRowMask(aggregatedMask)
-            .add('count', name, `${name}_count`)
-            .aggregate();
-        }
-      });
-
-      this.data = [];
-      this.barStats = {};
-
-      for (const [name, df] of Object.entries(this.aggregatedTables)) {
-        const colObj: {
-          'name': string,
-          'data': { 'name': string, 'count': number, 'selectedCount': number }[],
-        } = {'name': name, 'data': []};
-        this.barStats[colObj['name']] = colObj['data'];
-        this.data.push(colObj);
-
-        for (let i = 0; i < df.rowCount; i++) {
-          const amino = df.getCol(name).get(i);
-          const aminoCount = df.getCol(`${name}_count`).get(i);
-          const aminoObj = {'name': amino, 'count': aminoCount, 'selectedCount': 0};
-
-          if (!amino || amino === this.dataEmptyAA)
-            continue;
-
-          colObj['data'].push(aminoObj);
-          for (let j = 0; j < this.aggregatedTablesUnselected[name].rowCount; j++) {
-            const unsAmino = this.aggregatedTablesUnselected[name].getCol(`${name}`).get(j);
-            if (unsAmino == amino) {
-              aminoObj['selectedCount'] = this.aggregatedTablesUnselected[name]
-                .getCol(`${name}_count`)
-                .get(j);
+        for (const col of [aggHighlightedCountCol, aggSelectedCountCol]) {
+          for (let j = 0; j < col.length; j++) {
+            const highlightedAmino = aggHighlightedAminoCol.get(j);
+            const selectedAmino = aggSelectedAminoCol.get(j);
+            const curAmino = (col == aggHighlightedCountCol ? highlightedAmino : selectedAmino);
+            if (curAmino == amino) {
+              aminoObj[col == aggHighlightedCountCol ? 'highlightedCount' : 'selectedCount'] = col.get(j);
               break;
             }
           }
         }
-
-        colObj['data'] = colObj['data'].sort((o1, o2) => {
-          if (this.ord[o1['name']] > this.ord[o2['name']])
-            return -1;
-
-          if (this.ord[o1['name']] < this.ord[o2['name']])
-            return 1;
-
-          return 0;
-        });
       }
-      this.max = df.filter.trueCount;
+
+      colObj['data'].sort((o1, o2) => this.ord[o2['name']] - this.ord[o1['name']]);
     }
 
-    renderBarToCanvas(
-      g: CanvasRenderingContext2D,
-      cell: DG.GridCell,
-      x: number,
-      y: number,
-      w: number,
-      h: number,
-    ): void {
-      const name = cell.tableColumn!.name;
-      const colNameSize = g.measureText(name).width;
-      const barData = this.barStats[name];
-      const margin = 0.2;
-      const innerMargin = 0.02;
-      const selectLineRatio = 0.1;
-      let sum = 0;
+    this.max = this.dataFrame!.filter.trueCount;
+  }
 
-      barData.forEach((obj) => {
-        sum += obj['count'];
-      });
+  renderBarToCanvas(g: CanvasRenderingContext2D, cell: DG.GridCell, x: number, y: number, w: number, h: number) {
+    const name = cell.tableColumn!.name;
+    const colNameSize = g.measureText(name).width;
+    const barData = this.barStats[name];
+    const margin = 0.2;
+    const innerMargin = 0.02;
+    const selectLineRatio = 0.1;
+    let sum = 0;
 
-      x = x + w * margin;
-      y = y + h * margin / 4;
-      w = w - w * margin * 2 - 10;
-      h = h - h * margin;
-      g.fillStyle = 'black';
-      g.textBaseline = 'top';
-      g.font = `${h * margin / 2}px`;
-      g.fillText(name, x + (w - colNameSize) / 2, y + h + h * margin / 4);
+    barData.forEach((obj) => {
+      sum += obj['count'];
+    });
 
-      barData.forEach((obj) => {
-        const sBarHeight = h * obj['count'] / this.max;
-        const gapSize = sBarHeight * innerMargin;
-        const verticalShift = (this.max - sum) / this.max;
-        const [color, aarOuter, , ] = cp.getColorAAPivot(obj['name']);
-        const textSize = g.measureText(aarOuter);
-        const fontSize = 11;
-        const leftMargin = (w - (aarOuter.length > 1 ? fontSize : textSize.width - 8)) / 2;
-        const subBartHeight = sBarHeight - gapSize;
-        const start = h * verticalShift + gapSize / 2;
-        const absX = x + leftMargin;
-        const absY = y + start + subBartHeight / 2 + (aarOuter.length == 1 ? + 4 : 0);
+    x = x + w * margin;
+    y = y + h * margin / 4;
+    w = w - w * margin * 2;
+    h = h - h * margin;
+    const barWidth = w - 10;
+    g.fillStyle = 'black';
+    g.textBaseline = 'top';
+    g.font = `${h * margin / 2}px`;
+    g.fillText(name, x + (w - colNameSize) / 2, y + h + h * margin / 4);
 
-        g.strokeStyle = color;
-        g.fillStyle = color;
-        if (textSize.width <= subBartHeight) {
-          const origTransform = g.getTransform();
+    barData.forEach((obj) => {
+      const sBarHeight = h * obj['count'] / this.max;
+      const gapSize = sBarHeight * innerMargin;
+      const verticalShift = (this.max - sum) / this.max;
+      const [color, aarOuter] = PeptidesController.chemPalette.getColorAAPivot(obj['name']);
+      const textSize = g.measureText(aarOuter);
+      const fontSize = 11;
+      const leftMargin = (w - (aarOuter.length > 1 ? fontSize : textSize.width - 8)) / 2;
+      const subBartHeight = sBarHeight - gapSize;
+      const yStart = h * verticalShift + gapSize / 2;
+      const xStart = (w - barWidth) / 2;
+      const absX = x + leftMargin;
+      const absY = y + yStart + subBartHeight / 2 + (aarOuter.length == 1 ? + 4 : 0);
+      const eps = 0.1;
 
-          if (color != ChemPalette.undefinedColor) {
-            g.fillRect(x, y + start, w, subBartHeight);
-            g.fillStyle = 'black';
-          } else
-            g.strokeRect(x + 0.5, y + start, w - 1, subBartHeight);
+      g.strokeStyle = color;
+      g.fillStyle = color;
+      if (textSize.width <= subBartHeight) {
+        const origTransform = g.getTransform();
 
-          g.font = `${fontSize}px monospace`;
-          g.textAlign = 'center';
-          g.textBaseline = 'bottom';
-
-          if (aarOuter.length > 1) {
-            g.translate(absX, absY);
-            g.rotate(Math.PI / 2);
-            g.translate(-absX, -absY);
-          }
-
-          g.fillText(aarOuter, absX, absY);
-          g.setTransform(origTransform);
+        if (color != PeptidesController.chemPalette.undefinedColor) {
+          g.fillRect(x + xStart, y + yStart, barWidth, subBartHeight);
+          g.fillStyle = 'black';
         } else
-          g.fillRect(x, y + start, w, subBartHeight);
+          g.strokeRect(x + xStart + 0.5, y + yStart, barWidth - 1, subBartHeight);
 
+        g.font = `${fontSize}px monospace`;
+        g.textAlign = 'center';
+        g.textBaseline = 'bottom';
 
-        if (this.selectionMode && obj['selectedCount'] > 0) {
-          g.fillStyle = 'rgb(255,165,0)';
-          g.fillRect(
-            x - w * selectLineRatio * 2,
-            y + start,
-            w * selectLineRatio,
-            h * obj['selectedCount'] / this.max - gapSize,
-          );
+        if (aarOuter.length > 1) {
+          g.translate(absX, absY);
+          g.rotate(Math.PI / 2);
+          g.translate(-absX, -absY);
         }
 
-        // @ts-ignore
-        if (this.dataFrame.currentRow[name] === obj['name']) {
-          g.strokeStyle = 'rgb(0,0,0)';
-          g.strokeRect(x, y + start, w, subBartHeight);
-        }
+        g.fillText(aarOuter, absX, absY);
+        g.setTransform(origTransform);
+      } else
+        g.fillRect(x + xStart, y + yStart, barWidth, subBartHeight);
 
-        sum -= obj['count'];
-      });
-      return;
-    }
-
-    render(computeData = true): void {
-      const df = this.dataFrame!;
-      if (computeData)
-        this.computeData(df);
-
-      if (this.tableCanvas) {
-        for (const name of this.aminoColumnNames)
-          this.renderBar(name);
+      if (obj['selectedCount'] > eps) {
+        g.fillStyle = 'rgb(255,165,0)';
+        g.fillRect(
+          x + xStart - w * selectLineRatio * 2,
+          y + yStart,
+          barWidth * selectLineRatio,
+          h * obj['selectedCount'] / this.max - gapSize,
+        );
       }
+
+      if (obj['highlightedCount'] > eps && obj['highlightedCount'] > obj['selectedCount']) {
+        g.fillStyle = 'rgb(209,242,251)';
+        g.fillRect(
+          x + xStart - w * selectLineRatio * 2,
+          y + yStart + h * obj['selectedCount'] / this.max - gapSize,
+          barWidth * selectLineRatio,
+          h * (obj['highlightedCount'] - obj['selectedCount']) / this.max - gapSize,
+        );
+      }
+
+      sum -= obj['count'];
+    });
+  }
+
+  highlight(cell: DG.GridCell, offsetX:number, offsetY:number, mouseEvent: MouseEvent) {
+    if (!cell.tableColumn?.name || !this.aminoColumnNames.includes(cell.tableColumn.name))
       return;
+
+    const colName = cell.tableColumn?.name;
+    const innerMargin = 0.02;
+    const margin = 0.2;
+    const bound = cell.bounds;
+    const height = 130;
+    const x = bound.x + bound.width * margin;
+    const y = height * margin / 4;
+    const w = bound.width - bound.width * margin * 2;
+    const h = height - height * margin;
+    const barData = this.barStats[colName];
+    const barWidth = w - 10;
+    let sum = 0;
+
+    barData.forEach((obj) => {
+      sum += obj['count'];
+    });
+
+    this.highlighted = null;
+    barData.forEach((obj) => {
+      const sBarHeight = h * obj['count'] / this.max;
+      const gapSize = sBarHeight * innerMargin;
+      const verticalShift = (this.max - sum) / this.max;
+      const subBartHeight = sBarHeight - gapSize;
+      const yStart = h * verticalShift + gapSize / 2;
+      const xStart = (w - barWidth) / 2;
+
+      if (offsetX >= x + xStart &&
+          offsetY >= y + yStart &&
+          offsetX <= x + xStart + barWidth &&
+          offsetY <= y + yStart + subBartHeight)
+        this.highlighted = {'colName': colName, 'aaName': obj['name']};
+
+
+      sum -= obj['count'];
+    });
+
+    if (!this.highlighted)
+      return;
+
+    if (mouseEvent.type == 'click') {
+      let idx = -1;
+
+      for (let i = 0; i < this.selected.length; ++i) {
+        if (JSON.stringify(this.selected[i]) == JSON.stringify(this.highlighted))
+          idx = i;
+      }
+
+      if (mouseEvent.shiftKey && idx == -1)
+        this.selected.push(this.highlighted);
+
+      if (mouseEvent.shiftKey && (mouseEvent.ctrlKey || mouseEvent.metaKey) && idx != -1)
+        this.selected.splice(idx, 1);
     }
+  }
 
-    onPropertyChanged(property: DG.Property): void {
-      super.onPropertyChanged(property);
-    }
+  unhighlight() {
+    this.highlighted = null;
+    this.highlightedMask!.setAll(false);
+    this.computeData();
+  }
 
-    register(args: DG.GridCellRenderArgs): void {
-      this.registered[args.cell.tableColumn!.name] = args.cell;
-    }
+  beginSelection(event: MouseEvent) {
+    if (!this.dataFrame)
+      return;
 
-    unregister(name: string): void {
-      if (this.registered[name])
-        delete this.registered[name];
-    }
+    this.highlightedMask!.setAll(false);
 
+    this.dataFrame.selection.handleClick((i: number) => {
+      for (const high of this.selected) {
+        if (high['aaName'] === (this.dataFrame!.getCol(high['colName']).get(i)))
+          return true;
+      }
+      return false;
+    }, event);
 
-    renderBar(name: string): void {
-      if (!this.registered[name] || !this.tableCanvas)
-        return;
-
-      const cell = this.registered[name];
-      const rect = cell.bounds;
-      this.renderBarToCanvas(this.tableCanvas.getContext('2d')!, cell, rect.x, rect.y, rect.width, rect.height);
-    }
-
-    highlight(cell: DG.GridCell, offsetX:number, offsetY:number): void {
-      if (!cell.tableColumn?.name || !this.aminoColumnNames.includes(cell.tableColumn.name))
-        return;
-
-      const colName = cell.tableColumn?.name;
-      const innerMargin = 0.02;
-      const margin = 0.2;
-      const bound = cell.bounds;
-      const height = 130;
-      const x = bound.x + bound.width * margin;
-      const y = height * margin / 4;
-      const w = bound.width - bound.width * margin * 2;
-      const h = height - height * margin;
-      const barData = this.barStats[colName];
-      let sum = 0;
-
-      barData.forEach((obj) => {
-        sum += obj['count'];
-      });
-
-      this.highlighted = null;
-      barData.forEach((obj) => {
-        const sBarHeight = h * obj['count'] / this.max;
-        const gapSize = sBarHeight * innerMargin;
-        const verticalShift = (this.max - sum) / this.max;
-        const subBartHeight = sBarHeight - gapSize;
-        const start = h * verticalShift + gapSize / 2;
-
-        if (offsetX >= x &&
-            offsetY >= y + start &&
-            offsetX <= x + w &&
-            offsetY <= y + start + subBartHeight)
-          this.highlighted = {'colName': colName, 'aaName': obj['name']};
-
-
-        sum -= obj['count'];
-      });
-    }
-
-    unhighlight(): void {
-      this.highlighted = null;
-      this.dataFrame?.selection.setAll(false);
-      this.render();
-    }
-
-    beginSelection(event:any): void {
-      if (!this.highlighted || !this.dataFrame)
-        return;
-
-      this.dataFrame!.selection.handleClick((i) => {
-        return this.highlighted!['aaName'] === (this.dataFrame!.getCol(this.highlighted!['colName']).get(i));
+    if (this.highlighted) {
+      this.dataFrame.rows.match({[this.highlighted['colName']]: this.highlighted['aaName']}).highlight();
+      this.highlightedMask!.handleClick((i: number) => {
+        if (this.highlighted!['aaName'] === (this.dataFrame!.getCol(this.highlighted!['colName']).get(i)))
+          return true;
+        return false;
       }, event);
     }
+
+    this.computeData();
+  }
 }

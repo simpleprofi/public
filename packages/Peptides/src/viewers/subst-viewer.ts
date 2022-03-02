@@ -5,7 +5,8 @@ import * as DG from 'datagrok-api/dg';
 import $ from 'cash-dom';
 
 import {setAARRenderer} from '../utils/cell-renderer';
-import {PeptidesModel} from '../model';
+import {PeptidesController} from '../peptides';
+// import {PeptidesModel} from '../model';
 
 export class SubstViewer extends DG.JsViewer {
   viewerGrid: DG.Grid | null;
@@ -13,8 +14,9 @@ export class SubstViewer extends DG.JsViewer {
   activityLimit: number;
   activityColumnName: string;
   private _name: string = 'Substitution analysis';
-  casesGrid: DG.Grid | null;
-  model: PeptidesModel | null;
+  // casesGrid: DG.Grid | null;
+  // model: PeptidesModel | null;
+  controller: PeptidesController | null;
 
   constructor() {
     super();
@@ -25,8 +27,8 @@ export class SubstViewer extends DG.JsViewer {
     this.activityLimit = this.float('activityLimit', 2);
 
     this.viewerGrid = null;
-    this.casesGrid = null;
-    this.model = null;
+    // this.casesGrid = null;
+    this.controller = null;
   }
 
   get name() {
@@ -37,10 +39,11 @@ export class SubstViewer extends DG.JsViewer {
     this.calcSubstitutions();
   }
 
-  onTableAttached(): void {
-    this.model = PeptidesModel.getOrInit(this.dataFrame!);
-    this.model.updateData(this.dataFrame!, null, null, (grok.shell.v as DG.TableView).grid, null, null, null);
-    this.subs.push(this.model.onSubstFlagChanged.subscribe(() => this.calcSubstitutions()));
+  async onTableAttached() {
+    // this.model = PeptidesModel.getOrInit(this.dataFrame!);
+    this.controller = await PeptidesController.getInstance(this.dataFrame!);
+    await this.controller.updateData(null, null, (grok.shell.v as DG.TableView).grid, null, null, null);
+    this.subs.push(this.controller.onSubstFlagChanged.subscribe(() => this.calcSubstitutions()));
   }
 
   calcSubstitutions() {
@@ -121,7 +124,7 @@ export class SubstViewer extends DG.JsViewer {
     const tableValuesKeys = Object.keys(tableValues);
     const dfLength = tableValuesKeys.length;
     const cols = [...nColsArray.keys()].map((v) => DG.Column.int(v.toString(), dfLength));
-    cols.forEach((col: DG.Column) => col.semType = 'Substitution');
+    cols.forEach((currentCol) => currentCol.semType = 'Substitution');
     const aarCol = DG.Column.string(aarColName, dfLength);
     cols.splice(0, 1, aarCol);
     const table = DG.DataFrame.fromColumns(cols);
@@ -224,6 +227,8 @@ export class SubstViewer extends DG.JsViewer {
           tempDf.rows.setValues(i, [col.get(row[0]), col.get(row[1]), row[2]]);
         }
 
+        tempDf.temp['isReal'] = true;
+
         initCol.semType = 'alignedSequence';
         // initCol.setTag('isAnalysisApplicable', 'false');
         initCol.temp['isAnalysisApplicable'] = false;
@@ -231,13 +236,13 @@ export class SubstViewer extends DG.JsViewer {
         // subsCol.setTag('isAnalysisApplicable', 'false');
         subsCol.temp['isAnalysisApplicable'] = false;
 
-        this.casesGrid = tempDf.plot.grid();
-        this.casesGrid.props.allowEdit = false;
+        // this.casesGrid = tempDf.plot.grid();
+        // this.casesGrid.props.allowEdit = false;
         grok.shell.o = DG.SemanticValue.fromValueType(tempDf, 'Substitution');
-      } else {
+      } else
         grok.shell.o = DG.SemanticValue.fromValueType(null, 'Substitution');
-        this.casesGrid = null;
-      }
+        // this.casesGrid = null;
+
 
       this.render();
     });

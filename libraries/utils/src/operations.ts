@@ -256,3 +256,12 @@ export function normalize(data: Vector): Vector {
   }
   return data;
 }
+/**
+ * Finds set difference between two lists.
+ * @param {any[]} a The first list.
+ * @param {any[]} b The second list.
+ */
+export function setDifference(a: any[], b: any[]): any[] {
+  const bSet = new Set(b);
+  return Array.from(new Set(a.filter((x) => !bSet.has(x))).values());
+}
