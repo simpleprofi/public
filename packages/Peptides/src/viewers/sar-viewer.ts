@@ -1,6 +1,7 @@
 import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
+import * as rxjs from 'rxjs';
 
 import $ from 'cash-dom';
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
@@ -77,6 +78,11 @@ export class SARViewer extends DG.JsViewer {
     this.initialized = true;
   }
 
+  onRCChanged(df: DG.DataFrame) {
+    console.warn([df.currentCol.name, df.currentRow.idx]);
+    //this.sourceGrid.
+  }
+
   async onTableAttached() {
     this.sourceGrid = this.view?.grid ?? (grok.shell.v as DG.TableView).grid;
     this.dataFrame?.setTag('dataType', 'peptides');
@@ -84,9 +90,28 @@ export class SARViewer extends DG.JsViewer {
     // this.model = PeptidesModel.getOrInit(this.dataFrame!);
     // this.model = this.controller.getOrInitModel();
 
+    const sourceDf = this.sourceGrid?.dataFrame!;
+
+    sourceDf.onRowsFiltering.subscribe((_) => {
+      if (this.viewerGrid && this.viewerGrid?.dataFrame) {
+        const bs = sourceDf.filter;
+        const df = this.viewerGrid.dataFrame;
+        const colName = df.currentCol.name;
+        const rowIdx = df.currentRow.idx;
+        console.warn([colName, rowIdx, bs]);
+        // bs.init((i) => sex.get(i) === 'M');
+      }
+      // let sex = sourceDf.col('sex');
+      // bs.init((i) => sex.get(i) === 'M');
+    });
+
     this.subs.push(this.controller.onStatsDataFrameChanged.subscribe((data) => this.statsDf = data));
     this.subs.push(this.controller.onSARGridChanged.subscribe((data) => {
       this.viewerGrid = data;
+      addClickHandler(this.viewerGrid);
+      // const df = this.viewerGrid.dataFrame!;
+      // df.onCurrentCellChanged.subscribe((_) => this.onRCChanged(df));
+
       this.render(false);
     }));
     this.subs.push(this.controller.onSARVGridChanged.subscribe((data) => this.viewerVGrid = data));
@@ -371,4 +396,60 @@ function accordionFunc(
       }, true);
     }
   }
+}
+
+type FilterOperation = 'and' | 'or';
+type PositionFilter = {[pos: number]: Set<string>};
+
+class MultipleSelection {
+  operation: FilterOperation;
+  filter: PositionFilter;
+
+  constructor(operation: FilterOperation = 'and') {
+    this.operation = operation;
+    this.filter = {};
+  }
+
+  input(pos: number, res: string) {
+    if (!this.filter[pos])
+      this.filter[pos] = new Set([]);
+
+    if (this.filter[pos].has(res))
+      this.remove(pos, res);
+    else
+      this.filter[pos].add(res);
+  }
+
+  remove(pos: number, res: string) {
+    if (this.filter[pos]) {
+      this.filter[pos].delete(res);
+
+      if (this.filter[pos].size == 0)
+        delete this.filter[pos];
+    }
+  }
+
+  set(pos: number, res: string) {
+    this.filter[pos] = new Set([res]);
+  }
+
+  get eval() {
+    return;
+  }
+}
+
+function addClickHandler(grid: DG.Grid) {
+  rxjs.fromEvent<MouseEvent>(grid.overlay, 'click').subscribe((mouseEvent: MouseEvent) => {
+    if (mouseEvent.type != 'click')
+      return;
+
+    const keyPressed = mouseEvent.ctrlKey || mouseEvent.metaKey;
+    const cell = grid.hitTest(mouseEvent.offsetX, mouseEvent.offsetY);
+
+    if (cell !== null && cell?.isTableCell) {
+      const colName = cell.gridColumn.name;
+      const rowIdx = cell.gridRow;
+      console.warn([colName, rowIdx, keyPressed]);
+    }
+  });
 }
