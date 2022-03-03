@@ -1,11 +1,11 @@
 import * as grok from 'datagrok-api/grok';
 import * as ui from 'datagrok-api/ui';
 import * as DG from 'datagrok-api/dg';
-import * as rxjs from 'rxjs';
 
 import $ from 'cash-dom';
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
 import {PeptidesController} from '../peptides';
+import {MultipleSelection, addGridCellClickHandler} from '../utils/SAR-multiple-selection';
 // import {PeptidesModel} from '../model';
 
 /**
@@ -34,6 +34,7 @@ export class SARViewer extends DG.JsViewer {
   // model: PeptidesModel | null;
   protected _name: string = 'Monomer-Positions';
   protected controller: PeptidesController | null;
+  protected multipleFilter: MultipleSelection;
   // protected pValueThreshold: number;
   // protected amountOfBestAARs: number;
   // duplicatesHandingMethod: string;
@@ -66,6 +67,7 @@ export class SARViewer extends DG.JsViewer {
     this.grouping = this.bool('grouping', false);
 
     this.sourceGrid = null;
+    this.multipleFilter = new MultipleSelection();
   }
 
   get name() {
@@ -78,10 +80,24 @@ export class SARViewer extends DG.JsViewer {
     this.initialized = true;
   }
 
-  onRCChanged(df: DG.DataFrame) {
-    console.warn([df.currentCol.name, df.currentRow.idx]);
-    //this.sourceGrid.
+  onSARCellClicked(colName: string, rowIdx: number, ctrlPressed: boolean) {
+    const cellValue = this.viewerGrid?.dataFrame?.col(this.aminoAcidResidue)?.get(rowIdx);
+
+    if (ctrlPressed)
+      this.multipleFilter.input(parseInt(colName), cellValue as string);
+    else
+      this.multipleFilter.set(parseInt(colName), cellValue as string);
+
+    this.dataFrame?.filter.fireChanged();
   }
+
+  // onSourceDataFrameRowsFiltering(args: any) {
+  //   const sourceDf = this.sourceGrid?.dataFrame!;
+  //   const bs = sourceDf.filter;
+  //   const filtered = this.multipleFilter.eval(sourceDf.columns);
+  //   bs.init((i) => filtered[i]);
+  //   console.warn(['onRowsFiltering', this.multipleFilter.filter, filtered, bs]);
+  // }
 
   async onTableAttached() {
     this.sourceGrid = this.view?.grid ?? (grok.shell.v as DG.TableView).grid;
@@ -90,28 +106,13 @@ export class SARViewer extends DG.JsViewer {
     // this.model = PeptidesModel.getOrInit(this.dataFrame!);
     // this.model = this.controller.getOrInitModel();
 
-    const sourceDf = this.sourceGrid?.dataFrame!;
-
-    sourceDf.onRowsFiltering.subscribe((_) => {
-      if (this.viewerGrid && this.viewerGrid?.dataFrame) {
-        const bs = sourceDf.filter;
-        const df = this.viewerGrid.dataFrame;
-        const colName = df.currentCol.name;
-        const rowIdx = df.currentRow.idx;
-        console.warn([colName, rowIdx, bs]);
-        // bs.init((i) => sex.get(i) === 'M');
-      }
-      // let sex = sourceDf.col('sex');
-      // bs.init((i) => sex.get(i) === 'M');
-    });
+    this.multipleFilter = new MultipleSelection();
+    //this.sourceGrid?.dataFrame?.onRowsFiltering.subscribe(this.onSourceDataFrameRowsFiltering.bind(this));
 
     this.subs.push(this.controller.onStatsDataFrameChanged.subscribe((data) => this.statsDf = data));
     this.subs.push(this.controller.onSARGridChanged.subscribe((data) => {
       this.viewerGrid = data;
-      addClickHandler(this.viewerGrid);
-      // const df = this.viewerGrid.dataFrame!;
-      // df.onCurrentCellChanged.subscribe((_) => this.onRCChanged(df));
-
+      addGridCellClickHandler(this.viewerGrid, this.onSARCellClicked.bind(this));
       this.render(false);
     }));
     this.subs.push(this.controller.onSARVGridChanged.subscribe((data) => this.viewerVGrid = data));
@@ -180,7 +181,7 @@ export class SARViewer extends DG.JsViewer {
         this.viewerGrid.dataFrame!.onCurrentCellChanged.subscribe((_) => {
           this.currentBitset = applyBitset(
             this.dataFrame!, this.viewerGrid!, this.aminoAcidResidue,
-            this.groupMapping!, this._initialBitset!, this.filterMode,
+            this.groupMapping!, this._initialBitset!, this.filterMode, this.multipleFilter,
           ) ?? this.currentBitset;
           syncGridsFunc(false, this.viewerGrid!, this.viewerVGrid!, this.aminoAcidResidue);
         });
@@ -188,7 +189,13 @@ export class SARViewer extends DG.JsViewer {
           syncGridsFunc(true, this.viewerGrid!, this.viewerVGrid!, this.aminoAcidResidue);
         });
         this.dataFrame.onRowsFiltering.subscribe((_) => {
-          sourceFilteringFunc(this.filterMode, this.dataFrame!, this.currentBitset!, this._initialBitset!);
+          sourceFilteringFunc(
+            this.filterMode,
+            this.dataFrame!,
+            this.currentBitset!,
+            this._initialBitset!,
+            this.multipleFilter,
+          );
         });
         grok.events.onAccordionConstructed.subscribe((accordion: DG.Accordion) => {
           accordionFunc(
@@ -288,8 +295,20 @@ function syncGridsFunc(sourceVertical: boolean, viewerGrid: DG.Grid, viewerVGrid
   }
 }
 
+function onSourceDataFrameRowsFiltering(dataFrame: DG.DataFrame, multipleFilter: MultipleSelection) {
+  const bs = dataFrame.filter;
+  const filtered = multipleFilter.eval(dataFrame.columns);
+  bs.init((i) => filtered[i]);
+  console.warn(['onRowsFiltering', multipleFilter.filter, filtered, bs]);
+}
+
 function sourceFilteringFunc(
-  filterMode: boolean, dataFrame: DG.DataFrame, currentBitset: DG.BitSet, initialBitset: DG.BitSet) {
+  filterMode: boolean,
+  dataFrame: DG.DataFrame,
+  currentBitset: DG.BitSet,
+  initialBitset: DG.BitSet,
+  multipleFilter: MultipleSelection,
+) {
   if (filterMode) {
     dataFrame.selection.setAll(false, false);
     dataFrame.filter.copyFrom(currentBitset);
@@ -297,11 +316,18 @@ function sourceFilteringFunc(
     dataFrame.filter.copyFrom(initialBitset);
     dataFrame.selection.copyFrom(currentBitset);
   }
+  onSourceDataFrameRowsFiltering(dataFrame, multipleFilter);
 }
 
 function applyBitset(
-  dataFrame: DG.DataFrame, viewerGrid: DG.Grid, aminoAcidResidue: string, groupMapping: StringDictionary,
-  initialBitset: DG.BitSet, filterMode: boolean) {
+  dataFrame: DG.DataFrame,
+  viewerGrid: DG.Grid,
+  aminoAcidResidue: string,
+  groupMapping: StringDictionary,
+  initialBitset: DG.BitSet,
+  filterMode: boolean,
+  multipleFilter: MultipleSelection,
+) {
   let currentBitset = null;
   if (
     viewerGrid.dataFrame &&
@@ -326,7 +352,7 @@ function applyBitset(
 
     //TODO: use column.compact
     currentBitset = DG.BitSet.create(dataFrame.rowCount, isChosen).and(initialBitset);
-    sourceFilteringFunc(filterMode, dataFrame, currentBitset, initialBitset);
+    sourceFilteringFunc(filterMode, dataFrame, currentBitset, initialBitset, multipleFilter);
 
     const colorMap: {[index: string]: string | number} = {};
     colorMap[otherLabel] = DG.Color.blue;
@@ -396,60 +422,4 @@ function accordionFunc(
       }, true);
     }
   }
-}
-
-type FilterOperation = 'and' | 'or';
-type PositionFilter = {[pos: number]: Set<string>};
-
-class MultipleSelection {
-  operation: FilterOperation;
-  filter: PositionFilter;
-
-  constructor(operation: FilterOperation = 'and') {
-    this.operation = operation;
-    this.filter = {};
-  }
-
-  input(pos: number, res: string) {
-    if (!this.filter[pos])
-      this.filter[pos] = new Set([]);
-
-    if (this.filter[pos].has(res))
-      this.remove(pos, res);
-    else
-      this.filter[pos].add(res);
-  }
-
-  remove(pos: number, res: string) {
-    if (this.filter[pos]) {
-      this.filter[pos].delete(res);
-
-      if (this.filter[pos].size == 0)
-        delete this.filter[pos];
-    }
-  }
-
-  set(pos: number, res: string) {
-    this.filter[pos] = new Set([res]);
-  }
-
-  get eval() {
-    return;
-  }
-}
-
-function addClickHandler(grid: DG.Grid) {
-  rxjs.fromEvent<MouseEvent>(grid.overlay, 'click').subscribe((mouseEvent: MouseEvent) => {
-    if (mouseEvent.type != 'click')
-      return;
-
-    const keyPressed = mouseEvent.ctrlKey || mouseEvent.metaKey;
-    const cell = grid.hitTest(mouseEvent.offsetX, mouseEvent.offsetY);
-
-    if (cell !== null && cell?.isTableCell) {
-      const colName = cell.gridColumn.name;
-      const rowIdx = cell.gridRow;
-      console.warn([colName, rowIdx, keyPressed]);
-    }
-  });
 }
