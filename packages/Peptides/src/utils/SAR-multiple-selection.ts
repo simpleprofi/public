@@ -9,20 +9,22 @@ const Operations = {
 };
 
 type FilterOperation = 'and' | 'or';
-type PositionFilter = {[pos: number]: Set<string>};
+type PositionFilter = {[pos: string]: Set<string>};
 
 export class MultipleSelection {
   conjunction: boolean;
-  operation: Operation;
   filter: PositionFilter;
+  protected operation: Operation;
+  protected complete: (v: boolean) => boolean;
 
   constructor(operation: FilterOperation = 'and') {
     this.conjunction = operation == 'and';
-    this.operation = Operations[operation];
     this.filter = {};
+    this.operation = Operations[operation];
+    this.complete = (v: boolean) => (this.conjunction && !v) || (!this.conjunction && v);
   }
 
-  input(pos: number, res: string) {
+  input(pos: string, res: string) {
     if (!this.filter[pos])
       this.filter[pos] = new Set([]);
 
@@ -32,7 +34,7 @@ export class MultipleSelection {
       this.filter[pos].add(res);
   }
 
-  remove(pos: number, res: string) {
+  remove(pos: string, res: string) {
     if (this.filter[pos]) {
       this.filter[pos].delete(res);
 
@@ -41,20 +43,20 @@ export class MultipleSelection {
     }
   }
 
-  set(pos: number, res: string) {
+  set(pos: string, res: string) {
     this.filter = {};
     this.filter[pos] = new Set([res]);
   }
 
-  eval(pos: DG.ColumnList): boolean[] {
-    const itemsCount = pos.length;
+  eval(pos: DG.DataFrame): boolean[] {
+    const itemsCount = pos.rowCount;
     const cond = new Array<boolean>(itemsCount).fill(this.conjunction);
-    const complete = (found: boolean) => (this.conjunction && !found) || (!this.conjunction && found);
 
     for (let i = 0; i < itemsCount; ++i) {
       for (const [p, r] of Object.entries(this.filter)) {
-        cond[i] = this.operation(cond[i], r.has(pos.byName(`${p}`).get(i)));
-        if (complete(cond[i]))
+        cond[i] = this.operation(cond[i], r.has(pos.get(p, i)));
+
+        if (this.complete(cond[i]))
           break;
       }
     }
@@ -72,7 +74,7 @@ export function addGridCellClickHandler(grid: DG.Grid, handler: ClickHandler) {
     const keyPressed = mouseEvent.ctrlKey || mouseEvent.metaKey;
     const cell = grid.hitTest(mouseEvent.offsetX, mouseEvent.offsetY);
 
-    if (cell !== null && cell?.isTableCell) {
+    if (cell !== null && cell.isTableCell) {
       const pos = cell.gridColumn.name;
       const rowIdx = cell.tableRowIndex!;
       handler(pos, rowIdx, keyPressed);
