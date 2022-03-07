@@ -80,15 +80,16 @@ export class SARViewer extends DG.JsViewer {
     this.initialized = true;
   }
 
-  onSARCellClickedCtrl(colName: string, rowIdx: number, ctrlPressed: boolean) {
+  onSARCellClicked(colName: string, rowIdx: number, ctrlPressed: boolean) {
     const isMultiposSel = colName == this.aminoAcidResidue;
     const isMultiresSel = rowIdx < 0;
 
     if (isMultiposSel && isMultiresSel)
       return;
 
-    const changeFilter = (ctrlPressed ? this.multipleFilter.input : this.multipleFilter.set).bind(this.multipleFilter);
+    const changeFilter = ctrlPressed ? this.multipleFilter.input : this.multipleFilter.set;
     const df = this.viewerGrid?.dataFrame!;
+    const columns = df.columns as DG.ColumnList;
     let pos: string | undefined;
     let res: string | undefined;
 
@@ -97,28 +98,63 @@ export class SARViewer extends DG.JsViewer {
     if (!isMultiresSel)
       res = df.get(this.aminoAcidResidue, rowIdx);
 
-    console.warn([isMultiposSel, isMultiresSel, pos, res, changeFilter]);
-
     if (isMultiposSel)
-      this.multipleFilter.setRes(res!, (df.columns as DG.ColumnList).names().slice(1));
+      this.multipleFilter.setRes(res!, columns.names().slice(1)); // All except the first column
     else if (isMultiresSel)
       this.multipleFilter.setPos(pos!, df.col(this.aminoAcidResidue)!.toList());
     else
-      changeFilter(pos!, res!);
+      changeFilter.bind(this.multipleFilter)(pos!, res!);
 
     console.warn([ctrlPressed ? 'ctrl+click' : 'click', this.multipleFilter.filter]);
 
-    if (ctrlPressed)
-      this.dataFrame?.rows.requestFilter();
+    //if (ctrlPressed)
+    this.dataFrame?.rows.requestFilter();
   }
 
   onSourceDataFrameRowsFiltering(args: any) {
-    console.warn(['onRowsFiltering', this.groupMapping]);
     const df = this.dataFrame!;
     const filtered = this.multipleFilter.eval(df, this.groupMapping!);
-    const newFilter = DG.BitSet.create(filtered.length, (i) => filtered[i]);
-    df.filter.and(newFilter);
-    console.warn(['onRowsFiltering', this.multipleFilter.filter, filtered.filter((v) => v).length]);
+    const auxFilter = DG.BitSet.create(filtered.length, (i) => filtered[i]);
+    const currentBitset = df.filter.and(auxFilter);
+    console.warn([
+      'onRowsFiltering',
+      this.multipleFilter.filter,
+      filtered.filter((v) => v).length,
+      currentBitset.getSelectedIndexes().length,
+    ]);
+    this.currentBitset = applyBitset(
+      this.dataFrame!, this.viewerGrid!, this.aminoAcidResidue,
+      this.groupMapping!, currentBitset, this._initialBitset!, this.filterMode,
+    ) ?? currentBitset;
+  }
+
+  setupGridVizualization() {
+    this.viewerGrid?.setOptions({
+      'showCurrentRowIndicator': false,
+      'allowBlockSelection': false,
+      'allowColSelection': false,
+      'allowRowSelection': false,
+    });
+  }
+
+  selectionCellRenderrer(args: DG.GridCellRenderArgs) {
+    if (args.cell.isTableCell) {
+      const cell = args.cell;
+      const pos = cell.gridColumn.name;
+
+      if (pos !== this.aminoAcidResidue) {
+        const rowIdx = cell.tableRowIndex!;
+        const res = cell.cell.dataFrame.get(this.aminoAcidResidue, rowIdx);
+
+        if (this.multipleFilter.test(pos, res, this.groupMapping!)) {
+          const ctx = args.g;
+          ctx.rect(args.bounds.x, args.bounds.y, args.bounds.width, args.bounds.height);
+          ctx.lineWidth = 10;
+          // ctx.fillStyle = (args.cell.isColHeader ? 'red' : 'blue');
+          args.preventDefault();
+        }
+      }
+    }
   }
 
   async onTableAttached() {
@@ -133,7 +169,9 @@ export class SARViewer extends DG.JsViewer {
     this.subs.push(this.controller.onStatsDataFrameChanged.subscribe((data) => this.statsDf = data));
     this.subs.push(this.controller.onSARGridChanged.subscribe((data) => {
       this.viewerGrid = data;
-      addGridCellClickHandler(this.viewerGrid, this.onSARCellClickedCtrl.bind(this));
+      addGridCellClickHandler(this.viewerGrid, this.onSARCellClicked.bind(this));
+      this.setupGridVizualization();
+      this.viewerGrid.onCellRender.subscribe(this.selectionCellRenderrer.bind(this));
       this.render(false);
     }));
     this.subs.push(this.controller.onSARVGridChanged.subscribe((data) => this.viewerVGrid = data));
@@ -206,10 +244,10 @@ export class SARViewer extends DG.JsViewer {
         gridRoot.style.width = 'auto';
         this.root.appendChild(ui.divV([title, gridRoot]));
         this.viewerGrid.dataFrame!.onCurrentCellChanged.subscribe((_) => {
-          this.currentBitset = applyBitset(
-            this.dataFrame!, this.viewerGrid!, this.aminoAcidResidue,
-            this.groupMapping!, this._initialBitset!, this.filterMode,
-          ) ?? this.currentBitset;
+          // this.currentBitset = applyBitset(
+          //   this.dataFrame!, this.viewerGrid!, this.aminoAcidResidue,
+          //   this.groupMapping!, this._initialBitset!, this.filterMode,
+          // ) ?? this.currentBitset;
           syncGridsFunc(false, this.viewerGrid!, this.viewerVGrid!, this.aminoAcidResidue);
         });
         this.viewerVGrid.dataFrame!.onCurrentCellChanged.subscribe((_) => {
@@ -341,10 +379,11 @@ function applyBitset(
   viewerGrid: DG.Grid,
   aminoAcidResidue: string,
   groupMapping: StringDictionary,
+  currentBitset: DG.BitSet,
   initialBitset: DG.BitSet,
   filterMode: boolean,
 ) {
-  let currentBitset = null;
+  //let currentBitset = null;
   if (
     viewerGrid.dataFrame &&
     viewerGrid.dataFrame.currentCell.value &&
@@ -367,7 +406,7 @@ function applyBitset(
     splitCol!.init((i) => isChosen(i) ? aarLabel : otherLabel);
 
     //TODO: use column.compact
-    currentBitset = DG.BitSet.create(dataFrame.rowCount, isChosen).and(initialBitset);
+    //currentBitset = DG.BitSet.create(dataFrame.rowCount, isChosen).and(initialBitset);
     sourceFilteringFunc(filterMode, dataFrame, currentBitset, initialBitset);
 
     const colorMap: {[index: string]: string | number} = {};
