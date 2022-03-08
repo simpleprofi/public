@@ -5,7 +5,7 @@ import * as DG from 'datagrok-api/dg';
 import $ from 'cash-dom';
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
 import {PeptidesController} from '../peptides';
-import {MultipleSelection, addGridCellClickHandler} from '../utils/SAR-multiple-selection';
+import {MultipleSelection, addGridMouseHandler, MouseEventType, CellType} from '../utils/SAR-multiple-selection';
 // import {PeptidesModel} from '../model';
 
 /**
@@ -80,9 +80,30 @@ export class SARViewer extends DG.JsViewer {
     this.initialized = true;
   }
 
-  onSARCellClicked(colName: string, rowIdx: number, ctrlPressed: boolean) {
+  onSARGridMouseEvent(
+    eventType: MouseEventType,
+    cellType: CellType,
+    colName: string | null,
+    rowIdx: number | null,
+    ctrlPressed: boolean,
+  ) {
+    switch (eventType) {
+    case 'mouseout':
+      this.onSARCellMouseOut();
+      break;
+    case 'click':
+      if (colName)
+        this.onSARCellClicked(colName, rowIdx, ctrlPressed);
+      break;
+    case 'mousemove':
+      this.onSARCellHover(colName, rowIdx);
+      break;
+    }
+  }
+
+  onSARCellClicked(colName: string, rowIdx: number | null, ctrlPressed: boolean) {
     const isMultiposSel = colName == this.aminoAcidResidue;
-    const isMultiresSel = rowIdx < 0;
+    const isMultiresSel = rowIdx === null;
 
     if (isMultiposSel && isMultiresSel)
       return;
@@ -107,8 +128,25 @@ export class SARViewer extends DG.JsViewer {
 
     console.warn([ctrlPressed ? 'ctrl+click' : 'click', this.multipleFilter.filter]);
 
-    //if (ctrlPressed)
     this.dataFrame?.rows.requestFilter();
+  }
+
+  onSARCellHover(colName: string | null, rowIdx: number | null) {
+    if (!colName || !rowIdx)
+      return;
+
+    const df = this.viewerGrid?.dataFrame!;
+
+    if (!(df.columns as DG.ColumnList).names().includes(colName))
+      return;
+
+    const res = df.get(this.aminoAcidResidue, rowIdx);
+
+    this.dataFrame!.rows.match({[colName]: res}).highlight();
+  }
+
+  onSARCellMouseOut() {
+    this.dataFrame!.rows.match({}).highlight();
   }
 
   onSourceDataFrameRowsFiltering(args: any) {
@@ -134,6 +172,7 @@ export class SARViewer extends DG.JsViewer {
       'allowBlockSelection': false,
       'allowColSelection': false,
       'allowRowSelection': false,
+      'showMouseOverRowIndicator': false,
     });
   }
 
@@ -169,9 +208,9 @@ export class SARViewer extends DG.JsViewer {
     this.subs.push(this.controller.onStatsDataFrameChanged.subscribe((data) => this.statsDf = data));
     this.subs.push(this.controller.onSARGridChanged.subscribe((data) => {
       this.viewerGrid = data;
-      addGridCellClickHandler(this.viewerGrid, this.onSARCellClicked.bind(this));
+      addGridMouseHandler(this.viewerGrid, this.onSARGridMouseEvent.bind(this));
       this.setupGridVizualization();
-      this.viewerGrid.onCellRender.subscribe(this.selectionCellRenderrer.bind(this));
+      // this.viewerGrid.onCellRender.subscribe(this.selectionCellRenderrer.bind(this));
       this.render(false);
     }));
     this.subs.push(this.controller.onSARVGridChanged.subscribe((data) => this.viewerVGrid = data));

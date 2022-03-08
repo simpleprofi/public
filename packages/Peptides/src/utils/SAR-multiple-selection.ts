@@ -133,32 +133,56 @@ export class MultipleSelection {
   }
 }
 
-export type ClickHandler = (colName: string, rowIdx: number, ctrlPressed: boolean) => void;
+const MouseEventsSource = {
+  click: 0,
+  mousemove: 1,
+  mouseout: 2,
+};
+const MouseEvents = Object.keys(MouseEventsSource);
+export type MouseEventType = keyof typeof MouseEventsSource;
+export type CellType = 'isTableCell' | 'isColHeader' | 'unknown';
+
+type MouseEventHandler = (
+  eventType: MouseEventType,
+  cellType: CellType,
+  colName: string | null,
+  rowIdx: number | null,
+  ctrlPressed: boolean
+) => void;
 
 /**
- * Adds mouse left button handler to the click event bus.
+ * Adds mouse event handler to the click event bus.
  * @param {DG.Grid} grid Grid to add to.
- * @param {ClickHandler} handler The handler.
- * @param {number} [headerClickRowIndex=-1] Row index to tell the handler a column header was clicked.
+ * @param {MouseEventHandler} handler Event handler.
  */
-export function addGridCellClickHandler(grid: DG.Grid, handler: ClickHandler, headerClickRowIndex = -1) {
-  rxjs.fromEvent<MouseEvent>(grid.overlay, 'click').subscribe((mouseEvent: MouseEvent) => {
-    if (mouseEvent.type != 'click')
+export function addGridMouseHandler(grid: DG.Grid, handler: MouseEventHandler) {
+  const onMouseEvent = (mouseEvent: MouseEvent) => {
+    if (!MouseEvents.includes(mouseEvent.type))
       return;
 
+    const mouseEventType: MouseEventType = mouseEvent.type as MouseEventType;
     const keyPressed = mouseEvent.ctrlKey || mouseEvent.metaKey;
     const cell = grid.hitTest(mouseEvent.offsetX, mouseEvent.offsetY);
+    let pos: string | null = null;
+    let rowIdx: number | null = null;
+    let cellType: CellType = 'unknown';
 
-    if (cell == null)
-      return;
+    if (cell) {
+      pos = cell.gridColumn.name;
 
-    if (cell.isTableCell) {
-      const pos = cell.gridColumn.name;
-      const rowIdx = cell.tableRowIndex!;
-      handler(pos, rowIdx, keyPressed);
-    } else if (cell.isColHeader) {
-      const pos = cell.gridColumn.name;
-      handler(pos, headerClickRowIndex, keyPressed);
+      if (pos.length == 0)
+        pos = null;
+
+      if (cell.isTableCell) {
+        rowIdx = cell.tableRowIndex!;
+        cellType = 'isTableCell';
+      } else if (cell.isColHeader)
+        cellType = 'isColHeader';
     }
-  });
+
+    handler(mouseEventType, cellType, pos, rowIdx, keyPressed);
+  };
+
+  for (const e of MouseEvents)
+    rxjs.fromEvent<MouseEvent>(grid.overlay, e).subscribe(onMouseEvent);
 }
