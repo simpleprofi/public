@@ -129,10 +129,11 @@ export class SARViewer extends DG.JsViewer {
     console.warn([ctrlPressed ? 'ctrl+click' : 'click', this.multipleFilter.filter]);
 
     this.dataFrame?.rows.requestFilter();
+    this.viewerGrid?.invalidate();
   }
 
   onSARCellHover(colName: string | null, rowIdx: number | null) {
-    if (!colName || !rowIdx)
+    if (!colName || !rowIdx || colName == this.aminoAcidResidue)
       return;
 
     const df = this.viewerGrid?.dataFrame!;
@@ -187,10 +188,9 @@ export class SARViewer extends DG.JsViewer {
 
         if (this.multipleFilter.test(pos, res, this.groupMapping!)) {
           const ctx = args.g;
-          ctx.rect(args.bounds.x, args.bounds.y, args.bounds.width, args.bounds.height);
-          ctx.lineWidth = 10;
-          // ctx.fillStyle = (args.cell.isColHeader ? 'red' : 'blue');
-          args.preventDefault();
+          ctx.lineWidth = 1;
+          ctx.strokeStyle = 'black';
+          ctx.strokeRect(args.bounds.x, args.bounds.y, args.bounds.width, args.bounds.height);
         }
       }
     }
@@ -210,7 +210,7 @@ export class SARViewer extends DG.JsViewer {
       this.viewerGrid = data;
       addGridMouseHandler(this.viewerGrid, this.onSARGridMouseEvent.bind(this));
       this.setupGridVizualization();
-      // this.viewerGrid.onCellRender.subscribe(this.selectionCellRenderrer.bind(this));
+      this.viewerGrid.onCellRender.subscribe(this.selectionCellRenderrer.bind(this));
       this.render(false);
     }));
     this.subs.push(this.controller.onSARVGridChanged.subscribe((data) => this.viewerVGrid = data));
