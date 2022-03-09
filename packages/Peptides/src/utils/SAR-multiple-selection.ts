@@ -105,15 +105,29 @@ export class MultipleSelection {
     const itemsCount = df.rowCount;
     const cond = new Array<boolean>(itemsCount).fill(this.conjunction);
 
-    for (let i = 0; i < itemsCount; ++i) {
-      for (const [posColumnName, resFilter] of Object.entries(this.filter)) {
-        const residue = df.get(posColumnName, i);
-        const isMatched = resFilter.has(mapper[residue] ?? residue);
-        cond[i] = this.operation(cond[i], isMatched);
+    for (let i = 0; i < itemsCount; ++i)
+      cond[i] = this.match(i, df, mapper);
 
-        if (this.complete(cond[i]))
-          break;
-      }
+    return cond;
+  }
+
+  /**
+   * Tests if i-th element is matched filter.
+   * @param {number} i Element's index
+   * @param {DG.DataFrame} df Data frame to consider.
+   * @param {StringDictionary} [mapper={}] Optional residues mapper.
+   * @return {boolean} Result of the test.
+   */
+  match(i: number, df: DG.DataFrame, mapper: StringDictionary = {}): boolean {
+    let cond: boolean = this.conjunction;
+
+    for (const [posColumnName, resFilter] of Object.entries(this.filter)) {
+      const residue = df.get(posColumnName, i);
+      const isMatched = resFilter.has(mapper[residue] ?? residue);
+      cond = this.operation(cond, isMatched);
+
+      if (this.complete(cond))
+        break;
     }
     return cond;
   }
