@@ -1,6 +1,35 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-03-11 Dev build 0.128.1
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.128.1`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Webstorm configs 
+* Ability to set Function as a default value 
+* WebStrom default configurations 
+* Viewers: legend: ability to reset"filter by category" 
+* Sequence Translator: add dropdown list for salts, with corresponding molecular weights and charges (WIP)
+* (Bug) Newly created user failed to login (WIP)
+* Fixed #344: Miss configured in-visualisation filter kills the browser session 
+* Fixed the initial position of the filter 
+* RepertoireBrowser: Add grid viewer with tree info. 
+* Grid: Excel-style column resizing 
+* Grid: column rearrangement: fixed the "'offsetParent' was called on null" bug 
+* Grid: ability to reorder multiple columns at once 
+* Renamed images 
+* JnJ: monitoring resources: RAM, CPU, HDD 
+* Sharing file connection must share credentials (WIP)
+
+
 # 2022-02-24 Dev build 0.128.0
 
 ## Latest Docker Images
