@@ -37,7 +37,7 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
 
 1. To connect a file hosting service, configure the appropriate connector. You can do it in the following two ways:
 
-    * Click **Open** (![Open](/help/images/open-icon.png)) > **Files** and then click **New file share**. In the **Data Source** field, select a file hosting and enter connection parameters. 
+    * In the left-hand sidebar, click ![Open](/help/images/open-icon.png) > **Files** and then click **New file share**. In the **Data Source** field, select a file hosting and enter connection parameters. 
 
         ![Connect a file hosting](/help/images/access/connect-file-hosting.gif)
 
@@ -54,12 +54,26 @@ Click **OK** to save the connection.
 
 ## Connect a file share
 
-A file share is a directory on the Datagrok server that you can set up to have access to from Datagrok. 
+You can use a file share mounted on the Datagrok server as a data source. 
+All files in the shared directory become available in the Datagrok UI, and you can open supported file formats as tables.
+
+To add a file share, select 
+
+| Option            | Description                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------- |
+| Data source       | For file shares, this field should be set to "Files".          |
+| Name              | The name that is used to identify the folder in the Datagrok UI.                          |
+| Dir               | The source directory on the Datagrok server. |
+| Index Files       | Select this option to enable file indexing. |
+| Credentials owner | Name of the Datagrok user who owns the files and folders from the data source      |
+| Login             | Login to the data source                                                           |
+| Password          | Password to data source                                                            |
+
 
 ## Upload a file
 
 You can upload a file from your computer. 
-Drag and drop a file into the working area in Datagrok, or, from the menu, select **File** > **Open** > **File**.
+Drag and drop a file into the working area in Datagrok, or, from the menu, select **File** > **Open** > **File...**.
 Any supported file format is converted into a table and you can start analyzing your data.
 Note that in this case the data is not uploaded to the server but stays in the browser. 
 Datagrok will lose the data when you close the browser tab.
