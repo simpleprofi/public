@@ -1,6 +1,22 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-03-14 Dev build 0.128.2
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.128.2`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Sharing file connection must share credentials (WIP)
+* JnJ: monitoring resources: RAM, CPU, HDD 
+
+
 # 2022-03-11 Dev build 0.128.1
 
 ## Latest Docker Images
