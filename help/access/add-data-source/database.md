@@ -6,17 +6,17 @@ Typicall, you will need to provide a server name and login credentials.
 ## Set up a connection
 
 1. Open the list of available connectors:
-    * Click ![Open](/help/images/open-icon.png) > **Databases**, or
+    * In the left-hand sidebar, click ![Open](/help/images/open-icon.png) > **Databases**, or
     * From the top menu bar, click **File** > **Connect to data...**
 
-2. Right-click on a database icon you want to use and select *Add connection...*.
+2. Right-click on a database icon you want to use and select **Add connection...**.
 
     ![Add connection](/help/images/access/data-connection-tree.png)
 
 3. Fill out the connection parameters in the dialog that appears.
 NOTE:  The **Conn String** field is for specifying JDBC connection string.
 If entered, the connection string overwrites connection parameters except for the credentials.
-See [JDBC connection string](#jdbc-connection-string) below.
+See [Use a JDBC connection string](#use-a-jdbc-connection-string) below.
 
     ![Connection properties](/help/images/access/connection-properties.png)
 
