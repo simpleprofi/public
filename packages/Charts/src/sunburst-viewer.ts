@@ -1,9 +1,7 @@
-import * as echarts from 'echarts';
-import { EChartViewer, Utils } from './echart-viewer';
+import {EChartViewer, Utils} from './echart-viewer';
 
 /// https://echarts.apache.org/examples/en/editor.html?c=tree-basic
 export class SunburstViewer extends EChartViewer {
-
   constructor() {
     super();
     this.initCommonProperties();
@@ -13,19 +11,16 @@ export class SunburstViewer extends EChartViewer {
         {
           type: 'sunburst',
           label: {
-            rotate: 'radial'
-          }
-        }
-      ]
+            rotate: 'radial',
+          },
+        },
+      ],
     };
 
-    this.onPropertyChanged(null);
+    this.onPropertyChanged(this.emptyProperty);
   }
 
   getSeriesData() {
-    return Utils.toForest(
-      this.dataFrame,
-      ['sex', 'race', 'dis_pop'],
-      this.dataFrame.filter);
+    return Utils.toForest(this.dataFrame!, ['sex', 'race', 'dis_pop'], this.dataFrame!.filter);
   }
 }

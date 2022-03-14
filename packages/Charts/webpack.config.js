@@ -3,7 +3,10 @@ const path = require('path');
 module.exports = {
   mode: 'production',
   entry: {
-    package: './src/package.js'
+    package: './src/package.ts'
+  },
+  resolve: {
+    extensions: ['.wasm', '.mjs', '.js', '.json', '.ts', '.tsx'],
   },
   module: {
     rules: [
@@ -11,6 +14,7 @@ module.exports = {
         test: /\.css$/i,
         use: ['style-loader', 'css-loader'],
       },
+      { test: /\.tsx?$/, loader: 'ts-loader' }
     ]
   },
   // devtool: 'inline-source-map',

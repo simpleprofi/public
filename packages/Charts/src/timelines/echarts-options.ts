@@ -1,5 +1,7 @@
+import {EChartOption} from 'echarts';
+
 /** Initial options for `echarts` library. */
-export const options = {
+export const options: EChartOption = {
   tooltip: {
     trigger: 'axis',
     showContent: false,
@@ -21,8 +23,8 @@ export const options = {
   yAxis: {
     type: 'category',
     triggerEvent: true,
-    axisTick: { show: false },
-    axisLine: { show: false },
+    axisTick: {show: false},
+    axisLine: {show: false},
   },
   dataZoom: [
     {
@@ -45,18 +47,18 @@ export const options = {
       type: 'slider',
       yAxisIndex: 0,
       width: 10,
-    }
+    },
   ],
   series: [
     {
       type: 'custom',
-      progressive: 0,   // Disable progressive rendering
-      encode: { x: [1, 2], y: 0 },
+      progressive: 0, // Disable progressive rendering
+      encode: {x: [1, 2], y: 0},
     },
   ],
 };
 
-export function deepCopy(object) {
+export function deepCopy<T>(object: T): T {
   return JSON.parse(JSON.stringify(object));
 }
 
@@ -65,3 +67,5 @@ export const VISIBILITY_MODE = {
   AUTO: 'Auto',
   NEVER: 'Never',
 };
+
+export type visibilityModeType = 'Always' | 'Auto' | 'Never';
