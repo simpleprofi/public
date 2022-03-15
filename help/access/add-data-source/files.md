@@ -48,7 +48,7 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
     ![File share properties](/images/access/file-share-properties.png)
     --->
 
-2. Enter connection parameters and click **TETS** to make sure you can connect to the file hosting. 
+2. Enter connection parameters and click **TEST** to make sure you can connect to the file hosting. 
 Click **OK** to save the connection.
 
 
