@@ -26,9 +26,9 @@ See [Use a JDBC connection string](#use-a-jdbc-connection-string) below.
     
 ### Use a JDBC connection string
 
-In some cases, your connection may require that you specify a JDBC connection string.
-The connectors that support a custom JDBC connection string, the connection parameters dialog has the *Conn String* field.
-If specified, the given string is used to establish a connection, and all other parameters are ignored except for **Login** and **Password**.
+In some cases, you may want to specify a JDBC connection string manually.
+If a connector supports a custom JDBC connection string, the connection parameters dialog has the *Conn String* field.
+If specified, the given string is used to establish a connection, and all other parameters except for **Login** and **Password** are ignored.
 
 ## What's next
 
