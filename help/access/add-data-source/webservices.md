@@ -8,16 +8,19 @@ Provides access to data sources via REST API based on link:https://swagger.io/[O
 -->
 
 
-[OpenAPI](https://swagger.io/docs/specification/about/), also known as swagger, is a popular format for describing the structure of server APIs.
-Datagrok can create a data source based on OpenAPI definitions in YAML or JSON format.
-You can simply drag and drop a definitions file and its content get translated into data connections, queries, and functions. 
+[OpenAPI](https://swagger.io/docs/specification/about/), also known as swagger, is a popular format for describing the structure of REST APIs.
+Datagrok can create a connection to a REST service based on its OpenAPI definitions in YAML or JSON format.
+You can simply drag and drop an OpenAPI definitions file into Datagrok, and its content gets translated into data connections, queries, and functions. 
 
-All OpenAPI data srouces are vailable under the **Web** connector in the list of connectors.
+All OpenAPI-based connections are available under the ![Web](/help/images/web.png) **Web** item in the list of connections.
+The name of the connection is extracted from the `info - title` field of the definition file.
 
+<!--
 You can find this connection in [Connections Tree](https://public.datagrok.ai/connect)
 under the source "Web". There is a special view
 [Web Services](https://public.datagrok.ai/webservices) in the Datagrok's UI, which displays only OpenAPI connections.
 These connections may also be found in the "Data" section on the left sidebar next to "Databases".
+-->
 
 ## Import an OpenAPI definition file
 
@@ -27,15 +30,46 @@ You can import an OpenAPI definition file in multiple ways:
 * From the menu, select **File** > **Connect to data**, then right-click on ![Web](/help/images/web.png) **Web**
 * In the left-hand sidebar, click ![Open](/help/images/open-icon.png) > **Webservices** > **Import OpenAPI file...**
 
-
+<!--
 ## How OpenAPI definition is interpreted
+-->
+
+Datagrok creates the following entities based on the OpenAPI definition file:
+
+* A Web connection with the name and description from the `title` and `description` fields.
+* A data query within the created connection for each `path` defined in the OpenAPI file. The name of the query is taken from the `summary` field. 
+
+See the [Example](#example) section below for specific examples. 
+
+
+## Provide credentials for the REST API service
+
+Datagrok supports all types of OpenAPI security schemes: 
+
+- `basic` for Basic authentication
+- `apiKey` for an API key
+- `oauth2` for OAuth 2
+
+
+
+## Pass query parameters
+
+
+
+
+## Parse `date-time` format
+
+
+<!--
 
 | In Swagger File | In Datagrok                                          |
 |-----------------|------------------------------------------------------|
-| title           | [Data connection](data-connection.md) name           |
-| description     | [Data connection](data-connection.md) description    |
-| paths           | [Data query](data-query.md) is created for each path |
-| summary         | [Data query](data-query.md) name                     |
+| title           | Connection name                                      |
+| description     | Connection description                               |
+| paths           | Each path becomes a data query within the connection |
+| summary         | Data query  name                                     |
+
+-->
 
 
 ## Example
