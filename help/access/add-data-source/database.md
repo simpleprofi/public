@@ -15,16 +15,16 @@ Typically, you will need to provide a server name and login credentials.
 
 3. Fill out the connection parameters in the dialog that appears.
 
-NOTE: The **Conn String** field is for specifying a JDBC connection string.
-If entered, the connection string overwrites connection parameters except for the credentials.
-See [Use a JDBC connection string](#use-a-jdbc-connection-string) below.
+    NOTE: The **Conn String** field is for specifying a JDBC connection string.
+    If entered, the connection string overwrites connection parameters except for the credentials.
+    See [Use a custom JDBC connection string](#use-a-custom-jdbc-connection-string) below.
 
     ![Connection parameters](/help/images/access/connection-properties.png)
 
 4. Test your connection by clicking **TEST** and then click **OK**.
     
     
-### Use a JDBC connection string
+### Use a custom JDBC connection string
 
 In some cases, you may want to specify a JDBC connection string manually.
 If a connector supports a custom JDBC connection string, the connection parameters dialog has the *Conn String* field.
