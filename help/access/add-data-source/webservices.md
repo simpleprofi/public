@@ -3,24 +3,15 @@
 
 ## OpenAPI
 
-<!--
-Provides access to data sources via REST API based on link:https://swagger.io/[OpenAPI 2.0 (Swagger API)].
--->
-
-
 [OpenAPI](https://swagger.io/docs/specification/about/), also known as swagger, is a popular format for describing the structure of REST APIs.
 Datagrok can create a connection to a REST service based on its OpenAPI definitions in YAML or JSON format.
 You can simply drag and drop an OpenAPI definitions file into Datagrok, and its content gets translated into data connections, queries, and functions. 
 
 All OpenAPI-based connections are available under the ![Web](/help/images/web.png) **Web** item in the list of connections.
 The name of the connection is extracted from the `info - title` field of the definition file.
+Datagrok creates demo connectors for a number of popular REST API services. 
+The OpenAPI definition files for all demo connectors are available in our public repository: https://github.com/datagrok-ai/public/tree/master/packages/Swaggers/swaggers.
 
-<!--
-You can find this connection in [Connections Tree](https://public.datagrok.ai/connect)
-under the source "Web". There is a special view
-[Web Services](https://public.datagrok.ai/webservices) in the Datagrok's UI, which displays only OpenAPI connections.
-These connections may also be found in the "Data" section on the left sidebar next to "Databases".
--->
 
 ## Import an OpenAPI definition file
 
@@ -34,21 +25,33 @@ You can import an OpenAPI definition file in multiple ways:
 ## How OpenAPI definition is interpreted
 -->
 
-Datagrok creates the following entities based on the OpenAPI definition file:
+Datagrok parses the file and creates the following entities based on its content:
 
 * A Web connection with the name and description from the `title` and `description` fields.
 * A data query within the created connection for each `path` defined in the OpenAPI file. The name of the query is taken from the `summary` field. 
 
-See the [Example](#example) section below for specific examples. 
+See the [Example](#example) section below for specific examples of queries created from API paths. 
 
 
-## Provide credentials for the REST API service
+<!-- TODO: what's the Requires Server option? -->
 
-Datagrok supports all types of OpenAPI security schemes: 
+## Provide security credentials for the REST API service
+
+Datagrok supports all types of OpenAPI security schemes (authentication types): 
 
 - `basic` for Basic authentication
 - `apiKey` for an API key
 - `oauth2` for OAuth 2
+
+The security scheme is defined in the OpenAPI file, in the `securityDefinitions` section.
+Datagrok recognizes the authentication type and lets you provide the security credentials in the connection properties dialog.
+Note that for different security schemes the dialog contains different input fields: **Login** and **Password** for basic authentication, **ApiKey** for API key-based authentication, and so on. 
+If the OpenAPI file does not define any security schemes, the properties dialog does not contain any input fields for credentials. 
+
+To open the connection properties dialog, right-click on the connection created from the OpenAPI file and select **Edit...**. 
+
+![OpenAPI connection properties dialog](/help/images/access/openapi-connection-properties.png) 
+
 
 
 
@@ -57,7 +60,8 @@ Datagrok supports all types of OpenAPI security schemes:
 
 
 
-## Parse `date-time` format
+
+## Specify format for `date-time` fields 
 
 
 <!--
