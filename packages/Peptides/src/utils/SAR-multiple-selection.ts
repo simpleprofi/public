@@ -1,6 +1,6 @@
 import * as DG from 'datagrok-api/dg';
+
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
-import * as rxjs from 'rxjs';
 
 type Operation = (op1: boolean, op2: boolean) => boolean;
 
@@ -112,7 +112,7 @@ export class MultipleSelection {
   }
 
   /**
-   * Tests if i-th element is matched filter.
+   * Tests if i-th element matches filter.
    * @param {number} i Element's index
    * @param {DG.DataFrame} df Data frame to consider.
    * @param {StringDictionary} [mapper={}] Optional residues mapper.
@@ -145,58 +145,4 @@ export class MultipleSelection {
 
     return false;
   }
-}
-
-const MouseEventsSource = {
-  click: 0,
-  mousemove: 1,
-  mouseout: 2,
-};
-const MouseEvents = Object.keys(MouseEventsSource);
-export type MouseEventType = keyof typeof MouseEventsSource;
-export type CellType = 'isTableCell' | 'isColHeader' | 'unknown';
-
-type MouseEventHandler = (
-  eventType: MouseEventType,
-  cellType: CellType,
-  colName: string | null,
-  rowIdx: number | null,
-  ctrlPressed: boolean
-) => void;
-
-/**
- * Adds mouse event handler to the click event bus.
- * @param {DG.Grid} grid Grid to add to.
- * @param {MouseEventHandler} handler Event handler.
- */
-export function addGridMouseHandler(grid: DG.Grid, handler: MouseEventHandler) {
-  const onMouseEvent = (mouseEvent: MouseEvent) => {
-    if (!MouseEvents.includes(mouseEvent.type))
-      return;
-
-    const mouseEventType: MouseEventType = mouseEvent.type as MouseEventType;
-    const keyPressed = mouseEvent.ctrlKey || mouseEvent.metaKey;
-    const cell = grid.hitTest(mouseEvent.offsetX, mouseEvent.offsetY);
-    let pos: string | null = null;
-    let rowIdx: number | null = null;
-    let cellType: CellType = 'unknown';
-
-    if (cell) {
-      pos = cell.gridColumn.name;
-
-      if (pos.length == 0)
-        pos = null;
-
-      if (cell.isTableCell) {
-        rowIdx = cell.tableRowIndex!;
-        cellType = 'isTableCell';
-      } else if (cell.isColHeader)
-        cellType = 'isColHeader';
-    }
-
-    handler(mouseEventType, cellType, pos, rowIdx, keyPressed);
-  };
-
-  for (const e of MouseEvents)
-    rxjs.fromEvent<MouseEvent>(grid.overlay, e).subscribe(onMouseEvent);
 }
