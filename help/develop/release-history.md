@@ -1,6 +1,73 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-03-15 Dev build 0.132.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.132.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* add model-catalog widget 
+* Made debug configuration the default one 
+* Grid tooltip should be more discreet 
+* Add IN operator to AddNewColumn 
+* Box Plot: "inverse Y axis" property 
+* Fixed #348: HTML cells \- selection & scrolling issues 
+* RepertoireBrowser: Add tree grid filtering by the main tree. 
+* Ability to rename tab of docked viewer 
+* (Bug) applyLayout drops columns if table property set 
+* Sequence Translator: add dropdown list for salts, with corresponding molecular weights and charges 
+* Added Neptune 
+
+
+# 2022-03-14 Dev build 0.131.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.131.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* SequenceTranslator: macromolecule rendering 
+* Oligo Batch Calculator: use abbreviation as unique keys in User Data Storage 
+* RepertoireBrowser: Refactoring. 
+* JnJ: monitoring resources: RAM, CPU, HDD 
+* update viewers-gallery 
+
+
+# 2022-03-14 Dev build 0.130.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.130.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Clinical case: extracting VISITDY from tv domain, handling missing ~STDY columns in visits view 
+* RepertoireBrowser: Refactor tree statistics collection. 
+* RepertoireBrowser: Fix tree node label. 
+* Sharing file connection must share credentials (WIP)
+* update viewer gallery 
+* RepertoireBrowser: Fix tree node label highlight. 
+* RepertoireBrowser: Add improved tree node label colouring. 
+* RepertoireBrowser: Refactoring. 
+* JnJ: monitoring resources: RAM, CPU, HDD 
+
+
 # 2022-03-08 Dev build 0.129.0
 
 ## Latest Docker Images

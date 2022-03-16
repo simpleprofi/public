@@ -4,7 +4,7 @@ import * as DG from 'datagrok-api/dg';
 import $ from 'cash-dom';
 import '../css/viewers-gallery.css';
 import { filter } from 'rxjs';
-import { DataFrame, InputBase, TableView } from 'datagrok-api/dg';
+import { DataFrame, InputBase, TableView, View } from 'datagrok-api/dg';
 const cat_comparisons = [
     'Bar chart',
     'Radar viewer',
@@ -87,11 +87,15 @@ const viewerOptions = {
   filterBox.style.maxWidth = '230px';
 
   let dlgTitle;
+  let dlgFooter;
+  let dlg;
+  let view: DG.TableView;
 
   let okBtn;
   //let okBtn = ui.bigButton('ADD',()=>{});
 
   let backBtn = ui.iconFA('arrow-left',()=>{
+    dlgFooter.hide();
     $('.vg-selection-text').html('Selected: ');
     dlgTitle.text('Add viewer');
     $(okBtn).hide();
@@ -109,15 +113,45 @@ export async function viewersGallery() {
 
     let viewers = {};
     const table = grok.shell.t;
-    const view = grok.shell.tableView(table.name);
+    view = grok.shell.tableView(table.name);
     let root = ui.box();
     
-    let recommends = ui.divH([],'viewer-gallery');
+    let recommend = ui.divH([],'viewer-gallery');
     let selectioText = ui.div(['Selected: '],'vg-selection-text');
     let cards = ui.divH([],'viewer-gallery');
 
+    $(recommend).css('min-height','360px');
+    $(recommend).css('overflow','hidden');
+    
+
+    let showMore = ui.link('Show more', ()=>{
+        if($(showMore).hasClass('vg-link-expand')){
+            $(showMore).text('Show less');
+            $(showMore).addClass('vg-link-collapse');
+            $(showMore).removeClass('vg-link-expand');
+            console.log($(showMore))
+        }else if($(showMore).hasClass('vg-link-collapse')){
+            $(showMore).text('Show more');
+            $(showMore).addClass('vg-link-expand');
+            $(showMore).removeClass('vg-link-collapse');
+            console.log($(showMore))
+        }
+
+        $(recommend).toggleClass('vg-expanded');
+        
+        if($(recommend).hasClass('vg-expanded')){
+            $(recommend).css('min-height','auto');
+            $(recommend).css('overflow','initial');
+        }else{
+            $(recommend).css('min-height','360px');
+            $(recommend).css('overflow','hidden'); 
+        }
+    });
+    showMore.className = 'ui-link vg-link vg-link-expand';
+    $(showMore).attr('data-content', '\f078');
+
     let search = ui.searchInput('','',(value)=>{
-        clearRoot([recommends]);
+        clearRoot([recommend]);
         clearRoot([cards]);
         $(okBtn).hide();
         tempName = '';
@@ -133,7 +167,7 @@ export async function viewersGallery() {
             for (let i in viewers){
                 if (filter_value.indexOf(viewers[i].name) != -1 && viewers[i].name.toLowerCase().includes(value.toLowerCase())){
                     if (viewers[i].recommend)
-                        recommends.append(render(viewers[i],table))
+                        recommend.append(render(viewers[i],table))
                     else
                         cards.append(render(viewers[i],table));
                 }
@@ -143,11 +177,19 @@ export async function viewersGallery() {
             for (let i in viewers){
                 if (filter_value.indexOf(viewers[i].name) != -1){
                     if (viewers[i].recommend)
-                        recommends.append(render(viewers[i],table))
+                        recommend.append(render(viewers[i],table))
                     else
                         cards.append(render(viewers[i],table));
                 }
             }
+        }
+        console.log($(recommend).children());
+        if ($(recommend).children().length == 0){
+            $(recommend).css('min-height','0px');
+            $(showMore).hide();
+        }else{
+            $(recommend).css('min-height','360px');
+            $(showMore).show(); 
         }
         $('.vg-selection-text').html('Selected: '+ $('.viewer-gallery').find('.fa-minus').length);   
     });
@@ -162,37 +204,6 @@ export async function viewersGallery() {
     let filters_cat = ui.multiChoiceInput('', [''], ['Comparisons','Trends','Correlations','Relationships', 'Maps', 'Others'], (value)=>{
         getFilter([filters_type, filters_cat], viewers);
         search.fireChanged();
-        /*
-        search.value = '';
-        clearRoot([recommends]);
-        clearRoot([cards]);
-        $(okBtn).hide();
-        tempName = '';
-
-        if (value.length>0){
-            for (let i in viewers){
-                if (viewers[i].recommend){
-                    if (value.indexOf(viewers[i].category) != -1){
-                        recommends.append(render(viewers[i],table));
-                    }
-                }
-                else{
-                    if (value.indexOf(viewers[i].category) != -1){
-                        cards.append(render(viewers[i],table));
-                    }
-                }
-            }
-        }else{
-            for (let i in viewers){
-                if (viewers[i].recommend)
-                    recommends.append(render(viewers[i],table))
-                else
-                    cards.append(render(viewers[i],table));
-            }
-        }
-        
-
-        $('.vg-selection-text').html('Selected: '+ $('.viewer-gallery').find('.fa-minus').length); */
     })
 
     //@ts-ignore
@@ -209,7 +220,8 @@ export async function viewersGallery() {
             name: insertSpaces(DG.Viewer.getViewerTypes()[i]),
             type: 'Viewer',
             recommend: false,
-            category: 'Other'
+            category: 'Other',
+            disabled: false
         }});
 
         if (i<7){
@@ -235,28 +247,26 @@ export async function viewersGallery() {
             viewers[i].icon = 'grok-icon svg-icon svg-project';
         }
 
-    }
+        if (i>40){
+            viewers[i].disabled = true;
+        }
 
+    }
+    
     filterBox.append(ui.divV([
         ui.h3('Type'),
         filters_type.root,
         ui.h3('Category'),
         filters_cat.root
-       /* ui.boolInput('Comparison',false),
-        ui.boolInput('Trends',false),
-        ui.boolInput('Part to whole',false),
-        ui.boolInput('Correlations',false),
-        ui.boolInput('Relationships',false),
-        ui.boolInput('Maps',false),
-       */ 
     ], 'vg-filter-panel'));
     
 
     contentBox.append(
         ui.divV([
             searchBlock,
-            ui.h1('Recommends'),
-            recommends,
+            ui.h1('Recommend'),
+            recommend,
+            showMore,
             ui.h1('All viewers'),
             cards,
         ], 'viewer-gallery-root')
@@ -273,8 +283,8 @@ export async function viewersGallery() {
         contentBox,
         descriptionBox
     ])
-    ui.dialog('Add viewer')
-    let dlg = ui.dialog('Add viewer')
+
+    dlg = ui.dialog('Add viewer')
         .add(root
             //viewerRoot
         )
@@ -282,7 +292,7 @@ export async function viewersGallery() {
             if(tempName!=''){view.addViewer(DG.Viewer.fromType(tempName, table))}
             clearRoot([filterBox,contentBox,descriptionBox]);
             clearRoot([root]) 
-            clearRoot([recommends]);
+            clearRoot([recommend]);
             clearRoot([cards]);
             tempName = '';
         });
@@ -298,32 +308,33 @@ export async function viewersGallery() {
     
     $(dlg.root).find('.d4-command-bar').css('border-top','1px solid var(--grey-2)');
 
-    //$(dlg.root).find('.d4-command-bar').prepend(okBtn);
     okBtn = $(dlg.root).find('.d4-command-bar > button').first();
     okBtn.addClass('ui-btn-raised');
     okBtn.text('ADD')
     $(okBtn).hide();
-    /*
-    okBtn.addEventListener('click',()=>{
-        if(tempName!=''){view.addViewer(DG.Viewer.fromType(tempName, table))}
-        clearRoot([filterBox,contentBox,descriptionBox]);
-        clearRoot([root]) 
-        clearRoot([recommends]);
-        clearRoot([cards]);
-        tempName = '';
-    })
-    */
 
     dlgTitle = $(dlg.root).find('.d4-dialog-header>.d4-dialog-title');
+    dlgFooter = $(dlg.root).find('.d4-dialog-footer');
+    dlgFooter.hide();
+
     if (grok.shell.v.type == 'TableView'){
         dlg.showModal(true)
     }
 
     for (let i in viewers){
         if (viewers[i].recommend)
-            recommends.append(render(viewers[i],table))
-        else
-            cards.append(render(viewers[i],table));    
+            recommend.append(render(viewers[i],table))
+        else{
+            cards.append(render(viewers[i],table));
+        }  
+    }
+
+    if ($(recommend).children().length == 0){
+        $(recommend).css('min-height','0px');
+        $(showMore).hide();
+    }else{
+        $(recommend).css('min-height','360px');
+        $(showMore).show(); 
     }
 
 }
@@ -371,8 +382,12 @@ function render(viewer:any, table:DG.DataFrame){
     let icon = ui.iconFA('');
     icon.className = 'grok-icon svg-icon '+viewer.icon;
     let label = ui.div([viewer.name], 'card-label');
+    let add = ui.button(ui.iconFA('plus'), ()=>{
+        root.click();
+    });
 
-    let details = ui.button(ui.iconFA('list'), ()=>{
+    let details = ui.button(ui.icons.help(()=>{}, 'Click to read more about '+viewer.name), ()=>{
+        dlgFooter.show();
 
         tempName = viewer.name;
         $('.vg-selection-text').html('Selected: '+ viewer.name);
@@ -380,16 +395,13 @@ function render(viewer:any, table:DG.DataFrame){
         dlgTitle.text(viewer.name);
         //show details block
         $(okBtn).show();
-        root.style.border = '1px solid var(--grey-2)';
         $('.vg-selection-text').html('Selected: '+ viewer.name);
 
         $(backBtn).show();
         $(descriptionBox).show();
         $(contentBox).hide();
         $(filterBox).hide();
-        //clearRoot([descriptionBox]);
-        
-        //descriptionBox = ui.box();
+
         let markup = ui.panel();
         let options = ui.div();
         let viewerbox = ui.box();
@@ -402,7 +414,6 @@ function render(viewer:any, table:DG.DataFrame){
         tabs.style.paddingLeft = '20px';
         
         clearRoot([descriptionBox])
-        //descriptionBox.innerHTML = '';
         descriptionBox.append(ui.splitH([viewerbox,tabs], {style:{height:'100%'}}));   
 
         //@ts-ignore
@@ -414,40 +425,41 @@ function render(viewer:any, table:DG.DataFrame){
                 markup.append(ui.markdown(res));
                 $(markup).find('img').css('width','300px');
             });
-           
-          
-
     });
+
+    $(add).hide();
 
     if (viewer.recommend){
         let viewerRoot = ui.box(DG.Viewer.fromType(viewer.name, table, viewerOptions).root);
         root.className = 'd4-item-card viewer-gallery vg-card';
-        root.append(ui.block([viewerRoot,ui.divH([label,details])]));
+        root.append(ui.block([viewerRoot,ui.divH([label,add, details])]));
     }else{
         root.className = 'd4-item-card viewer-gallery vg-card-small';
-        root.append(ui.divH([icon,label,details]));
+        if(viewer.disabled)
+            root.classList.add('disabled')
+        root.append(ui.divH([icon,label,add, details]));
     }
     root.addEventListener('click', ()=>{
-        $('.vg-card').css('border','1px solid var(--grey-2)');
-        $('.vg-card-small').css('border','1px solid var(--grey-2)');
-        root.style.border = '1px solid var(--blue-1)';
-        tempName = viewer.name;
-        $('.vg-selection-text').html('Selected: '+ viewer.name);
-        $(okBtn).show();
+        //view.addViewer(DG.Viewer.fromType(tempName, table))
+        if (root.classList.contains('disabled')!=true){
+        dockViewers(viewer.name, table, view);
+        dlg.close();
+        }
     });
 
-    return root;
+    if(viewer.disabled!=true){
+        root.addEventListener('mouseover', ()=>{
+            $(add).show();
+            ui.tooltip.bind(add, 'Click to add '+viewer.name)
+        });
+        root.addEventListener('mouseout', ()=>{
+            $(add).hide();
+        });
+    }
+
+    return root
 }
 
-function unSelectAll(viewers:object){
-    for (let i in viewers){
-        viewers[i].dock = false
-    }
-}
-
-function dockViewers(viewers:object, table:DG.DataFrame, view: DG.TableView){
-    for (let i in viewers){
-        if(viewers[i].dock)
-            view.addViewer(DG.Viewer.fromType(viewers[i].name, table));
-    }
+function dockViewers(viewer:string, table:DG.DataFrame, view: DG.TableView){
+    view.addViewer(DG.Viewer.fromType(viewer, table));
 }
