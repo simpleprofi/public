@@ -12,6 +12,7 @@ import {SALTS_CSV} from './salts';
 import {USERS_CSV} from './users';
 import {ICDS} from './ICDs';
 import {SOURCES} from './sources';
+import {IDPS} from './IDPs';
 
 export const _package = new DG.Package();
 
@@ -219,8 +220,7 @@ export function sequenceTranslator(): void {
 
   const topPanel = [
     ui.iconFA('download', () => {
-      const smiles = sequenceToSmiles(inputSequenceField.value.replace(/\s/g, ''));
-      const result = `${OCL.Molecule.fromSmiles(smiles).toMolfile()}\n`;
+      const result = sequenceToMolV3000(inputSequenceField.value.replace(/\s/g, ''));
       const element = document.createElement('a');
       element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(result));
       element.setAttribute('download', inputSequenceField.value.replace(/\s/g, '') + '.mol');
@@ -259,8 +259,8 @@ async function saveTableAsSdFile(table: DG.DataFrame) {
   let result = '';
   for (let i = 0; i < table.rowCount; i++) {
     try {
-      const smiles = sequenceToSmiles(structureColumn.get(i));
-      const mol = OCL.Molecule.fromSmiles(smiles);
+      const molBlock = sequenceToMolV3000(structureColumn.get(i));
+      const mol = OCL.Molecule.fromMolfile(molBlock);
       result += `\n${mol.toMolfile()}\n`;
       for (const col of table.columns)
         result += `>  <${col.name}>\n${col.get(i)}\n\n`;
@@ -288,6 +288,7 @@ export function oligoSdFile(table: DG.DataFrame) {
   const usersDf = DG.DataFrame.fromCsv(USERS_CSV);
   const sourcesDf = DG.DataFrame.fromCsv(SOURCES);
   const icdsDf = DG.DataFrame.fromCsv(ICDS);
+  const idpsDf = DG.DataFrame.fromCsv(IDPS);
   function addColumns(t: DG.DataFrame, saltsDf: DG.DataFrame) {
     if (t.columns.contains('Compound Name'))
       return grok.shell.error('Columns already exist!');
@@ -341,32 +342,36 @@ export function oligoSdFile(table: DG.DataFrame) {
       const ownerCol = view.grid.col('Owner')!;
       const sourcesCol = view.grid.col('Source')!;
       const icdsCol = view.grid.col('ICD')!;
+      const idpsCol = view.grid.col('IDP')!;
       saltCol.cellType = 'html';
       typeCol.cellType = 'html';
       ownerCol.cellType = 'html';
       sourcesCol.cellType = 'html';
       icdsCol.cellType = 'html';
+      idpsCol.cellType = 'html';
       view.grid.onCellPrepare(function(gc: DG.GridCell) {
-        console.log('Start');
         if (gc.isTableCell) {
-          console.log(gc.gridColumn.name);
           if (gc.gridColumn.name == 'Type')
             gc.style.element = ui.choiceInput('', gc.cell.value, ['AS', 'SS', 'Duplex']).root;
           else if (gc.gridColumn.name == 'Owner') {
             gc.style.element = ui.choiceInput('', gc.cell.value, usersDf.columns.byIndex(0).toList(), () => {
-              view.dataFrame.col('Owner')!.set(gc.gridRow, '');
+              view.dataFrame.col('Owner')!.set(gc.gridRow, gc.cell.value);
             }).root;
           } else if (gc.gridColumn.name == 'Salt') {
             gc.style.element = ui.choiceInput('', gc.cell.value, saltsDf.columns.byIndex(1).toList(), () => {
-              view.dataFrame.col('Salt')!.set(gc.gridRow, '');
+              view.dataFrame.col('Salt')!.set(gc.gridRow, gc.cell.value);
             }).root;
           } else if (gc.gridColumn.name == 'Source') {
             gc.style.element = ui.choiceInput('', gc.cell.value, sourcesDf.columns.byIndex(0).toList(), () => {
-              view.dataFrame.col('Source')!.set(gc.gridRow, '');
+              view.dataFrame.col('Source')!.set(gc.gridRow, gc.cell.value);
             }).root;
           } else if (gc.gridColumn.name == 'ICD') {
             gc.style.element = ui.choiceInput('', gc.cell.value, icdsDf.columns.byIndex(0).toList(), () => {
-              view.dataFrame.col('ICD')!.set(gc.gridRow, '');
+              view.dataFrame.col('ICD')!.set(gc.gridRow, gc.cell.value);
+            }).root;
+          } else if (gc.gridColumn.name == 'IDP') {
+            gc.style.element = ui.choiceInput('', gc.cell.value, idpsDf.columns.byIndex(0).toList(), () => {
+              view.dataFrame.col('IDP')!.set(gc.gridRow, gc.cell.value);
             }).root;
           }
         }
