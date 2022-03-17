@@ -145,4 +145,33 @@ export class MultipleSelection {
 
     return false;
   }
+
+  /**
+   * Make string representation of the selected items.
+   * @return {string} String representation.
+   */
+  toString(): string {
+    let repr = '';
+
+    for (const [pos, res] of Object.entries(this.filter))
+      repr += `${pos}: ${Array.from(res).join(',')}\n`;
+
+    return repr;
+  }
+
+  /**
+   * Turns filter into grouping query string.
+   * @param {string} [residueColumnName='Res'] Optional residues column name.
+   * @return {string} Query-formatted string.
+   */
+  toQuery(residueColumnName: string = 'Res'): string {
+    const alt: string[] = [];
+
+    for (const [pos, residues] of Object.entries(this.filter)) {
+      for (const res of residues)
+        alt.push(`${residueColumnName} = ${res} and Pos = ${pos}`);
+    }
+
+    return alt.join(' or ');
+  }
 }
