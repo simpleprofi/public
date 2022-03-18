@@ -4,6 +4,7 @@ import * as rxjs from 'rxjs';
 
 import {StringDictionary} from '@datagrok-libraries/utils/src/type-declarations';
 import {MultipleSelection} from './SAR-multiple-selection';
+import {FilteringStatistics, Stats as FilterStats} from './filtering-statistics';
 
 /**
  * Implements multiple filtering callbacks to be used in events subscription.
@@ -12,6 +13,7 @@ export class SARMultipleFilter {
   protected selection: MultipleSelection;
   protected resources: Resources;
   protected filterMode: boolean;
+  protected stats: FilteringStatistics;
 
   /**
    * Creates an instance of SARMultipleFilter.
@@ -21,6 +23,7 @@ export class SARMultipleFilter {
     this.filterMode = filterMode;
     this.resources = new Resources();
     this.selection = new MultipleSelection();
+    this.stats = new FilteringStatistics();
   }
 
   /** Makes label to display filtered residue-positions on accordion. */
@@ -244,14 +247,29 @@ export class SARMultipleFilter {
       console.warn(['onSelectionChanged', this.selection.filter, df.selection.trueCount]);
     }
   }
+
+  /**
+   * Calculates statistics on the activity column.
+   * @return {FilterStats} Statistics.
+   */
+  getStatistics(): FilterStats {
+    this.resources.assert(['activityColumnName', 'dataFrame']);
+
+    const df = this.resources.dataFrame!;
+
+    this.stats.setData(df.col(this.resources.activityColumnName!)?.getRawData() as Float32Array);
+    this.stats.setMask(this.mask);
+    return this.stats.result;
+  }
 }
 
 /** Declares resources needed by the filtering. */
 interface FilterResources {
-    residueColumnName?: string;
-    grid?: DG.Grid;
-    dataFrame?: DG.DataFrame;
-    groupMapping?: StringDictionary;
+  residueColumnName?: string;
+  activityColumnName?: string;
+  grid?: DG.Grid;
+  dataFrame?: DG.DataFrame;
+  groupMapping?: StringDictionary;
 };
 
 type ResourceKey = keyof FilterResources;
@@ -323,6 +341,11 @@ class Resources {
   /** Residue column name. */
   get residueColumnName() {
     return this.data.residueColumnName;
+  }
+
+  /** Activity column name. */
+  get activityColumnName() {
+    return this.data.activityColumnName;
   }
 }
 

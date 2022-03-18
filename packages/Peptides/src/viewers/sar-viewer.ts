@@ -149,6 +149,9 @@ export class SARViewer extends DG.JsViewer {
     if (property.name === 'filterMode')
       this.multipleFilter.filteringMode = this.filterMode;
 
+    if (property.name === 'activityColumnName')
+      this.multipleFilter.addResource('activityColumnName', `${this.activityColumnName}Scaled`);
+
     if (property.name === 'scaling' && typeof this.dataFrame !== 'undefined') {
       const minActivity = DG.Stats.fromColumn(
         this.dataFrame!.col(this.activityColumnName)!,
@@ -228,15 +231,15 @@ export class SARViewer extends DG.JsViewer {
           hist.style.width = 'auto';
           elements.push(hist);
 
-          const tableMap: StringDictionary = {'Statistics:': ''};
-          const query = this.multipleFilter.query;
+          this.multipleFilter.addResource('activityColumnName', `${this.activityColumnName}Scaled`);
 
-          for (const colName of new Set(['Count', 'pValue', 'Mean difference'])) {
-            const textNum = this.statsDf!.groupBy([colName]).where(query).aggregate().get(colName, 0);
-            // const text = textNum === 0 ? '<0.01' : `${colName === 'Count' ? textNum : textNum.toFixed(2)}`;
-            const text = colName === 'Count' ? `${textNum}` : textNum < 0.01 ? '<0.01' : textNum.toFixed(2);
-            tableMap[colName === 'pValue' ? 'p-value' : colName] = text;
-          }
+          const stats = this.multipleFilter.getStatistics();
+          const tableMap: StringDictionary = {
+            'Statistics:': '',
+            'Count': stats.count.toString(),
+            'p-value': stats.pValue < 0.01 ? '<0.01' : stats.pValue.toFixed(2),
+            'Mean difference': stats.meanDifference.toFixed(2),
+          };
 
           elements.push(ui.tableFromMap(tableMap));
           return ui.divV(elements);
