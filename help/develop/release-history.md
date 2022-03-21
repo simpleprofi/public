@@ -1,6 +1,107 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-03-20 Dev build 0.136.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.136.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* (Bug) Grok connect: Neptune doesn't work with scalar values without column names 
+* Viewers: ability to specify default axis type (linear / logarithmic) 
+* Grok Compute gunicorn workers 
+* PowerGrid: initial update 
+
+
+# 2022-03-18 Dev build 0.135.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.135.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Chem: working with mol 
+* (Bug) AddNewColumn: Vectorization doesn't work 
+* Chem: hiding old realizations of similarity 
+* Ability to search JS-models in Model Catalog (WIP)
+* (Bug) Unable to delete project 
+
+
+# 2022-03-18 Dev build 0.134.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.134.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Peptides: cell renderers fix 
+* SequenceTranslator: IDP column dropdown 
+* SequenceTranslator: fix for 3dx read 
+* Compute: OutliersSelectionViewer simplified 
+* Chem: working with mol 
+* (Bug) AddNewColumn: Vectorization doesn't work 
+
+
+# 2022-03-16 Dev build 0.133.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.133.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Grok connect: test commit 
+* Typedoc revert to 0.21.x version 
+* Fixed js-api links 
+* Updated public token 
+* (Bug) Unable to switch scatterplot axis to logarithmic mode 
+
+
+# 2022-03-15 Dev build 0.132.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.132.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* add model-catalog widget 
+* Made debug configuration the default one 
+* Grid tooltip should be more discreet 
+* Add IN operator to AddNewColumn 
+* Box Plot: "inverse Y axis" property 
+* Fixed #348: HTML cells \- selection & scrolling issues 
+* RepertoireBrowser: Add tree grid filtering by the main tree. 
+* Ability to rename tab of docked viewer 
+* (Bug) applyLayout drops columns if table property set 
+* Sequence Translator: add dropdown list for salts, with corresponding molecular weights and charges 
+* Added Neptune 
+
+
 # 2022-03-14 Dev build 0.131.0
 
 ## Latest Docker Images
@@ -55,7 +156,7 @@
 
 ## Addressed Issues
 
-* Webstorm configs 
+* WebStorm configs
 * Ability to set Function as a default value 
 * WebStrom default configurations 
 * Viewers: legend: ability to reset"filter by category" 
