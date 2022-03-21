@@ -238,27 +238,31 @@ securityDefinitions:
     name: API_KEY
     in: query
 ```
-<!--
-## OData
-
-Provides access to https://www.odata.org/[OData]-based services.
--->
 
 ## OData-based REST APIs
 
-## RDF-based data
+Provides access to [OData](https://www.odata.org/)-based services.
+
+## RDF-based data (SPARQL)
+
+To add a connection to a SPARQL endpoint:
+
+1. In the left-hand sidebar, click ![Open](/help/images/open-icon.png) > **Databases** > ![Sparql](/help/images/sparql.png) **Sparql**. 
+
 
 ## Twitter
 
 
-## Requires server
+## **Requires server** option
 
-This option 
 
-If this option is selected, Datagrok makes requests to the web service endpoint via JavaScript from your browser.
-The first option may be   
+If this option is selected, Datagrok makes requests to the web service endpoint via the backend server. 
+That is, the backed server makes the request, and then the results are transferred to the Datagrok UI.
+If the option is not selected, Datagrok makes requests to the web service endpoint via JavaScript directly from your browser.
 
-make a requrest via the Datagrok backend server 
+A direct request from the browser may be faster and easier to debug via browser's JavaScript console. 
+However, if direct requests from the browser do not work (e.g. if the web service does not allow CORS requests), select this option to send request via the Datagrok backend. 
+
 
 ## What's next
 
