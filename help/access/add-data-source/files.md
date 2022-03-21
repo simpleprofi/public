@@ -9,7 +9,7 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
 * Amazon S3
 * Local directory
 
-<!--
+
 ## Supported file formats
 
 | Extension     | Description              |
@@ -31,9 +31,8 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
 | gz, gzip      | gzip                     |
 | tar           | tar                      |
 | ipynb         | Jupyter Notebook         |
--->
 
-## Connect a file hosting service
+## Connect to a file hosting service
 
 1. To connect a file hosting service, configure the appropriate connector. You can do it in the following two ways:
 
@@ -52,7 +51,7 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
 Click **OK** to save the connection.
 
 
-## Connect a file share
+## Connect to a file share (SMB)
 
 You can use a file share mounted on the Datagrok server as a data source. 
 All files in the shared directory become available in the Datagrok UI, and you can open supported file formats as tables.
@@ -60,15 +59,15 @@ All files in the shared directory become available in the Datagrok UI, and you c
 To add a file share, follow the steps for [connecting a file hosting](#connect-a-file-hosting-service) and select **Files** as the **Data Source** in the connection parameters dialog.
 The following table describes the parameters of the Files connector:
 
-| Parameter            | Description                                                                        |
-| ----------------- | ---------------------------------------------------------------------------------- |
-| Data Source       | For file shares, this field should be set to "Files".          |
-| Name              | The name that is used to identify the folder in the Datagrok UI.                          |
+| Parameter         | Description  |
+| ----------------- | ------------------------------------------------ |
+| Data Source       | For file shares, this field should be set to "Files".        |
+| Name              | The name that identifies the folder in the Datagrok UI.      |
 | Dir               | The source directory on the Datagrok server. |
 | Index Files       | Select this option to enable file indexing. |
-| Credentials owner | Name of the Datagrok user who owns the files and folders from the data source      |
-| Login             | Login to the data source                                                           |
-| Password          | Password to data source                                                            |
+| Credentials owner | Name of the Datagrok user who owns the files and folders from the data source |
+| Login             | Login to the data source         |
+| Password          | Password to data source         |
 
 
 ## Upload a file

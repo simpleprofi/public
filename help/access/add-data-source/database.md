@@ -32,6 +32,5 @@ If specified, the given string is used to establish a connection, and all other 
 
 ## What's next
 
-* [Explore the database]()
-* [Run queries]()
-* [Combine data from multiple data sources]()
+* [Explore database contents and schemas]()
+* [Run queries](queries.md)

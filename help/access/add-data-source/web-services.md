@@ -1,11 +1,23 @@
 # Webservices
 
 
-## OpenAPI
+Datagrok has out-of-the-box connectors to the following types of services:
+
+* OpenAPI-based APIs (Swagger)
+* OData-based REST APIs
+* RDF-based data (SPARQL)
+* Twitter
+
+
+
+
+## OpenAPI-based APIs
 
 [OpenAPI](https://swagger.io/docs/specification/about/), also known as swagger, is a popular format for describing the structure of REST APIs.
 Datagrok can create a connection to a REST service based on its OpenAPI definitions in YAML or JSON format.
 You can simply drag and drop an OpenAPI definitions file into Datagrok, and its content gets translated into data connections, queries, and functions. 
+
+You can use the OpenAPI file provided by the service, or you can create an OpenAPI file by following the [OpenAPI specification](https://swagger.io/specification/).
 
 All OpenAPI-based connections are available under the ![Web](/help/images/web.png) **Web** item in the list of connections.
 The name of the connection is extracted from the `info - title` field of the definition file.
@@ -13,7 +25,7 @@ Datagrok creates demo connectors for a number of popular REST API services.
 The OpenAPI definition files for all demo connectors are available in our public repository: https://github.com/datagrok-ai/public/tree/master/packages/Swaggers/swaggers.
 
 
-## Import an OpenAPI definition file
+### Import an OpenAPI definition file
 
 You can import an OpenAPI definition file in multiple ways:
 
@@ -34,7 +46,7 @@ TODO: query parameters
 
 <!-- TODO: what's the Requires Server option? -->
 
-## Provide security credentials for the REST API service
+### Provide security credentials for the REST API service
 
 Datagrok supports all types of OpenAPI security schemes (authentication types): 
 
@@ -62,7 +74,7 @@ securityDefinitions:
 ```
 
 
-## Execute API operations
+### Execute API operations
 
 Each operation defined in the OpenAPI file becomes a [Datagrok query](/help/access/queries.md).
 Like other queries in Datagrok, OpenAPI queries are available under the parent connection item in the [connection list](#) and in the **Queries** view.  
@@ -108,7 +120,7 @@ The OpenAPI definition may contain the definition of parameters that are used ac
 
 -->
 
-## Specify format for `date-time` fields 
+### Specify format for `date-time` fields 
 
 If an API operation has `date-time` parameters, the service usually requires that these parameters be specified in a specific format, for example `yyyy-MM-dd`. 
 Otherwise, the service won't be able to parse the provided value.
@@ -155,7 +167,7 @@ paths:
           grok-datetime-format: yyyy-MM-ddT00-0000
 ```
 
-## Example
+### Example
 
 ```yaml
 swagger: '2.0'
@@ -232,3 +244,22 @@ securityDefinitions:
 Provides access to https://www.odata.org/[OData]-based services.
 -->
 
+## OData-based REST APIs
+
+## RDF-based data
+
+## Twitter
+
+
+## Requires server
+
+This option 
+
+If this option is selected, Datagrok makes requests to the web service endpoint via JavaScript from your browser.
+The first option may be   
+
+make a requrest via the Datagrok backend server 
+
+## What's next
+
+* [Create an OpenAPI-based connection via a package](/help/develop/develop.md#packages)
