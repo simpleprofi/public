@@ -7,5 +7,19 @@ export const _package = new DG.Package();
 
 //name: test
 export function test() {
-  grok.shell.info(_package.webRoot);
+  const df = grok.shell.table('peptides');
+  const view = grok.shell.addTableView(df);
+
+  //view.ribbonMenu.
+
+  const menu = grok.shell.topMenu
+    .group('Custom')
+    .item('Foo!', () => grok.shell.info('Foo clicked'));
+}
+
+//name: peptidesEmbedding
+//description: Peptides embedding
+//top-menu: Peptides | Embedding
+export function peptidesEmbedding() {
+  grok.shell.info('Peptides | Embedding');
 }
