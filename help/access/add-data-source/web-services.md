@@ -1,4 +1,4 @@
-# Webservices
+# Web services
 
 
 Datagrok has out-of-the-box connectors to the following types of services:
@@ -60,6 +60,8 @@ Note that for different security schemes the dialog contains different input fie
 If the OpenAPI file does not define any security schemes, the properties dialog does not contain any input fields for credentials. 
 
 To open the connection properties dialog, right-click on the connection created from the OpenAPI file and select **Edit...**. 
+
+
 
 ![OpenAPI connection properties dialog](/help/images/access/openapi-connection-properties.png) 
 
@@ -245,23 +247,42 @@ Provides access to [OData](https://www.odata.org/)-based services.
 
 ## RDF-based data (SPARQL)
 
-To add a connection to a SPARQL endpoint:
+Datagrok offers a SPARQL connector that can be used to access RDF data (Resource Description Framework).  
+
+
+### Add a SPARQL endpoint
+
+To add a connection to a SPARQL endpoint, take the following steps:
 
 1. In the left-hand sidebar, click ![Open](/help/images/open-icon.png) > **Databases** > ![Sparql](/help/images/sparql.png) **Sparql**. 
+2. Fill in the connection parameter. 
+
+   |Option             | Description                           |
+   |-------------------|---------------------------------------|
+   | Name              | The name of the connection.           |
+   | Endpoint          | The URL of the SPARQL query endpoint. |
+   | Requires Server   | Whether to send query requests via the Datagrok backend or via JavaScript directly from the browser. See [Requires Server options](#requires-server-option) for details.  |
+   | Prefixes          | A list of prefixes that can be used in queries. These prefixes are available in all queries within this connection. You can also specify prefixes for individual queries. |
+
+3. Verify your connection by clicking **TEST** and then click **OK**.
+
+
+## Socrata
+
 
 
 ## Twitter
 
 
-## **Requires server** option
+## **Requires Server** option
 
+If this option is selected, Datagrok makes requests to the web service endpoint via the backend server (server-side). 
+That is, the backed server makes the request, and then the results are transferred to the Datagrok UI .
+If the option is not selected, Datagrok makes requests to the web service endpoint via JavaScript directly from your browser (client-side).
 
-If this option is selected, Datagrok makes requests to the web service endpoint via the backend server. 
-That is, the backed server makes the request, and then the results are transferred to the Datagrok UI.
-If the option is not selected, Datagrok makes requests to the web service endpoint via JavaScript directly from your browser.
-
-A direct request from the browser may be faster and easier to debug via browser's JavaScript console. 
-However, if direct requests from the browser do not work (e.g. if the web service does not allow CORS requests), select this option to send request via the Datagrok backend. 
+A client-side may be faster and easier to debug via browser's JavaScript console. 
+However, if client-side requests do not work (e.g. if the web service does not allow CORS requests), select this option to send request via the Datagrok backend. 
+Note that if the connection is protected by credentials, Datagrok will need to fetch the credentials to the UI to perform client-side requests, which may be a security concern. 
 
 
 ## What's next

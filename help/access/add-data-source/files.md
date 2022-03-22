@@ -32,6 +32,18 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
 | tar           | tar                      |
 | ipynb         | Jupyter Notebook         |
 
+
+## Upload a file
+
+You can upload a file into Datagrok from your computer. 
+Simply drag and drop a file into the Datagrok UI or, from the menu, select **File** > **Open** > **File...**. Any supported file format is converted into a table and you can start analyzing your data right away.
+
+Note that the files imported to the Datagrok UI are not automatically uploaded to the server. The data stays in the browser, and Datagrok will lose the file when you close the browser tab.
+If you want to save the file on the server, there are two options:
+
+* You can upload the file directly to the [Datagrok home directory](todo). 
+* [Create a project from the uploaded file](todo) and save the project on the server. 
+
 ## Connect to a file hosting service
 
 1. To connect a file hosting service, configure the appropriate connector. You can do it in the following two ways:
@@ -65,25 +77,27 @@ The following table describes the parameters of the Files connector:
 | Name              | The name that identifies the folder in the Datagrok UI.      |
 | Dir               | The source directory on the Datagrok server. |
 | Index Files       | Select this option to enable file indexing. |
-| Credentials owner | Name of the Datagrok user who owns the files and folders from the data source |
-| Login             | Login to the data source         |
-| Password          | Password to data source         |
+| Credentials owner | A group of users who can change the credentials for this connection. |
+| Login             | Login to the data source.         |
+| Password          | Password to the data source.         |
 
 
-## Upload a file
+## Browse files in the Datagrok UI
 
-You can upload a file into Datagrok from your computer. 
-Simply drag and drop a file into the Datagrok UI or, from the menu, select **File** > **Open** > **File...**. Any supported file format is converted into a table and you can start analyzing your data right away.
+Datagrok comes with a built-in file browser that lets you navigate and view all files uploaded by you, retrieved via configured file connectors, or shared with you by other users. 
+Files and folders are displayed as a tree view, and you can open a file by double-clicking on it.
 
-Note that the files imported to the Datagrok UI are not automatically uploaded to the server. The data stays in the browser, and Datagrok will lose the file when you close the browser tab.
-If you want to save the file on the server, there are two options:
+You can open the file browser from the left-hand sidebar by clicking ![Open](/help/images/open-icon.png) > **Files**. 
 
-* You can upload the file directly to the [Datagrok home directory](todo). 
-* [Create a project from the uploaded file](todo) and save the project on the server. 
+![File browser](/help/images/access/file-browser.png)
 
-<!--
-## Index files
--->
+Double-clicking on a supported file format opens the file in the Datagrok UI. 
+For other file formats, you are prompted to download the file.
+
+
+### Datagrok home directory
+
+Each Datagrok user has a home directory 
 
 
 ## What's next

@@ -6,6 +6,7 @@ You can provide credentials either manually or by using [AWS Secrets Manager](ht
 
 If a connector requires access credentials, the connection properties dialog contains the **Credentials** field. 
 By default, the field is set to **Manual** and disabled if no secrets manager is configured.
+In "manual" mode, credentials are kept inside Datagrok's [credential storage](/help/govern/security#credentials-storage).
 
 ![Credentials field](/help/images/access/credentials-field.png)
 
@@ -24,3 +25,6 @@ Once your AWS account is connected to Datagrok, open the connection properties d
 2. in the **Secret Name**, select the name of the secret you want to use for this connection.
 3. Click **TEST** to verify that the connection works. 
 
+## Credential owner
+
+Connection credentials can be associated with a group of users. 
