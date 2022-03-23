@@ -1,6 +1,43 @@
 <!-- TITLE: Release History -->
 <!-- SUBTITLE: -->
 
+# 2022-03-22 Dev build 0.139.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.139.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Clinical Case: Questionnaires view in progress, added tTest instead of anova when comparing 2 groups in boxplots view 
+* Missing table attribute in layout for "active table" #345 
+* DG.Utils.download(filename, content, contentType) 
+* Closes #369: Persisting tooltip form state 
+* Fixed #357: Free-text filter doesn't work for columns which names contain more than one word 
+
+
+# 2022-03-22 Dev build 0.138.0
+
+## Latest Docker Images
+
+* Datagrok: 
+  *  `docker pull datagrok/datagrok:0.138.0`
+  *  `docker pull datagrok/datagrok:latest`
+  
+* [Docker-Compose](admin/docker-compose.md)
+
+## Addressed Issues
+
+* Chem: hide fasr descriptors calculation 
+* Closes #372: JS API: expose CsvExportOptions 
+* Closes #350: Add option on toCsv() function to split QNum into two columns 
+* (Bug) Unable to call a function from AddNewColumn formula 
+
+
 # 2022-03-20 Dev build 0.136.0
 
 ## Latest Docker Images
