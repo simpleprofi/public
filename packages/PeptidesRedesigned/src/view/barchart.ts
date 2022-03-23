@@ -10,21 +10,13 @@ interface BarchartActions {
   selectBar(args: GridCellArgs): void;
 }
 
-export type CellRenderingOptions = {
-  context: CanvasRenderingContext2D,
-  cell: DG.GridCell,
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-};
-
 interface BarchartRendering {
   renderBar(options: CellRenderingOptions): void;
 }
 
 interface BarchartDataTransfer {
   set stats(gridStats: SplitGridStats);
+  set gridRowsCount(count: number);
 }
 export interface IBarchart extends BarchartActions, BarchartRendering, BarchartDataTransfer {
 }
@@ -43,6 +35,10 @@ export class Barchart extends DG.JsViewer implements IBarchart {
 
   set stats(gridStats: SplitGridStats) {
     this.gridStats = gridStats;
+  }
+
+  set gridRowsCount(count: number) {
+    this.rowsCount = count;
   }
 
   renderBar(options: CellRenderingOptions) {
@@ -189,3 +185,13 @@ class BarHeaderPainter {
     }
   }
 }
+
+export type CellRenderingOptions = {
+  context: CanvasRenderingContext2D,
+  cell: DG.GridCell,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+};
+

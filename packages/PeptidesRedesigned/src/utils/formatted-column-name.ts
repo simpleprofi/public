@@ -1,11 +1,16 @@
-export class FormattedColumnName {
-  static _zeroPad(n: number) {
-    const exp = Math.floor(Math.log10(n));
-    const pad = new Array(exp + 1).fill('0').join();
-    return (pad + n).slice(-pad.length);
+export class ZeroPaddedColumnName {
+  pad: string;
+
+  constructor(length: number) {
+    const exp = Math.floor(Math.log10(length));
+    this.pad = new Array(exp + 1).fill('0').join('');
   }
 
-  static columnName(index: number): string {
-    return this._zeroPad(index + 1);
+  protected _zeroPad(n: number) {
+    return (this.pad + n).slice(-this.pad.length);
+  }
+
+  format(indexZeroBased: number): string {
+    return this._zeroPad(indexZeroBased + 1);
   }
 }

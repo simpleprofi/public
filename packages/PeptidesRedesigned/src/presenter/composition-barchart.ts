@@ -3,7 +3,7 @@ import * as rxjs from 'rxjs';
 
 import {IBarchart} from '../view/barchart';
 import {Composition} from '../model/composition';
-import {SplitGrid} from './split-grid';
+import {ColumnFormatter} from './split-grid';
 
 // TODO: move to an external library.
 const semanticType = 'aminoAcids';
@@ -37,17 +37,20 @@ export class CompositionBarchart {
     this.model = model;
     this.external = external;
     this.updateGridStatistics();
+    this.updateGridContents();
     this.subscribeRendering();
     this.subscribeOnMouseEvents();
   }
 
   updateGridStatistics() {
     const comp = this.model.result;
+    const columnsCount = comp.length;
+    const columnFormatter = new ColumnFormatter(columnsCount);
     const stats: SplitGridStats = {};
 
-    for (let i = 0; i < comp.length; ++i) {
+    for (let i = 0; i < columnsCount; ++i) {
       const colComposition = comp[i];
-      const colName = SplitGrid.columnFormatter.columnName(i);
+      const colName = columnFormatter.format(i);
       stats[colName] = [];
 
       for (const key of Object.keys(colComposition)) {
@@ -60,6 +63,10 @@ export class CompositionBarchart {
       }
     }
     this.view.stats = stats;
+  }
+
+  updateGridContents() {
+    this.view.gridRowsCount = this.external.splitGrid.dataFrame!.rowCount;
   }
 
   onMouseEvent(event: MouseEvent) {
