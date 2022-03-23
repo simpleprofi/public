@@ -41,7 +41,7 @@ Simply drag and drop a file into the Datagrok UI or, from the menu, select **Fil
 Note that the files imported to the Datagrok UI are not automatically uploaded to the server. The data stays in the browser, and Datagrok will lose the file when you close the browser tab.
 If you want to save the file on the server, there are two options:
 
-* You can upload the file directly to the [Datagrok home directory](todo). 
+* You can upload the file directly to the [Datagrok home directory](#datagrok-home-directory). 
 * [Create a project from the uploaded file](todo) and save the project on the server. 
 
 ## Connect to a file hosting service
@@ -78,8 +78,8 @@ The following table describes the parameters of the Files connector:
 | Dir               | The source directory on the Datagrok server. |
 | Index Files       | Select this option to enable file indexing. |
 | Credentials owner | A group of users who can change the credentials for this connection. |
-| Login             | Login to the data source.         |
-| Password          | Password to the data source.         |
+| Login             | The login to the file share.         |
+| Password          | The password to the file share.         |
 
 
 ## Browse files in the Datagrok UI
@@ -97,10 +97,7 @@ For other file formats, you are prompted to download the file.
 
 ### Datagrok home directory
 
-Each Datagrok user has a home directory 
+Each Datagrok user has a home directory, which is accessible in the file browser under the name "Home". 
+The home directory is a file share mounted on the server. 
+You can use it to store and share files with other users. 
 
-
-## What's next
-
-
-* [Browse and share files](#)
