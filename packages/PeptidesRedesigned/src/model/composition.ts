@@ -1,14 +1,16 @@
 import {SplitSequencesColumn, SplitSequences} from './split';
 
+/** Compostion of residues at certain position. */
 type PositionComposition = {[residue: string]: number};
 
 export class Composition {
-  private sequencesSplit: SplitSequences;
-  private composition: PositionComposition[];
+  protected sequencesSplit: SplitSequences;
+  protected composition: PositionComposition[];
+  protected Reducer = EmptyReducer;
 
-  constructor(sequencesSplit: SplitSequences) {
+  constructor(sequencesSplit: SplitSequences = []) {
     this.sequencesSplit = sequencesSplit;
-    this.composition = [];
+    this.composition = this._calculate();
   }
 
   update(sequencesSplit: SplitSequences) {
@@ -19,11 +21,12 @@ export class Composition {
   private _calculate(): PositionComposition[] {
     const columnsCount = this.sequencesSplit.length;
     const result: PositionComposition[] = [];
+    const reducer = new this.Reducer();
 
     for (let i = 0; i < columnsCount; ++i) {
       const column = this.sequencesSplit[i];
       const comp = this._analyseColumn(column);
-      result.push(this._reduceComposition(comp, 1. / column.length));
+      result.push(reducer.reduce(comp));
     }
     return result;
   }
@@ -40,14 +43,33 @@ export class Composition {
     return comp;
   }
 
-  private _reduceComposition(composition: PositionComposition, ratio: number): PositionComposition {
+  get result(): PositionComposition[] {
+    return this.composition;
+  }
+}
+
+interface CompositionReducer {
+  reduce(composition: PositionComposition): PositionComposition;
+}
+
+// eslint-disable-next-line no-unused-vars
+class RatioReducer implements CompositionReducer {
+  ratio: number;
+
+  constructor(ratio: number) {
+    this.ratio = ratio;
+  }
+
+  reduce(composition: PositionComposition): PositionComposition {
     for (const key of Object.keys(composition)) {
-      composition[key] *= ratio;
+      composition[key] *= this.ratio;
     }
     return composition;
   }
+}
 
-  get result(): PositionComposition[] {
-    return this.composition;
+class EmptyReducer implements CompositionReducer {
+  reduce(composition: PositionComposition): PositionComposition {
+    return composition;
   }
 }

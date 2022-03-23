@@ -1,18 +1,12 @@
-import * as DG from 'datagrok-api/dg';
-
 import {Composition} from './composition';
+import {Split} from './split';
 
 export class Model {
-  private dataFrame: DG.DataFrame;
   composition: Composition;
+  split: Split;
 
-  constructor(dataFrame: DG.DataFrame) {
-    this.dataFrame = dataFrame;
-
-    this.composition = new Composition([]);
-  }
-
-  private split() {
-    this.composition.update([]);
+  constructor(alignedSequences: string[]) {
+    this.split = new Split(alignedSequences);
+    this.composition = new Composition(this.split.result);
   }
 }

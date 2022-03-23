@@ -5,13 +5,15 @@
 	"version": "0.0.1",
 	"description": "",
 	"dependencies": {
-		"datagrok-api": "latest",
+		"datagrok-api": ">=0.123.0",
+		"@datagrok-libraries/utils": ">=0.0.22",
+		"rxjs": "^7.5.5",
 		"cash-dom": "latest",
-		"dayjs": "latest",
-		"ts-loader": "latest",
-		"typescript": "latest"
+		"dayjs": "latest"
 	},
 	"devDependencies": {
+		"ts-loader": "latest",
+		"typescript": "latest",
 		"webpack": "latest",
 		"webpack-cli": "latest",
 		"eslint": "latest",
@@ -20,6 +22,9 @@
 		"@typescript-eslint/parser": "latest"
 	},
 	"scripts": {
+		"link-api": "npm link datagrok-api",
+		"link-utils": "npm link @datagrok-libraries/utils",
+		"link-all": "npm link datagrok-api @datagrok-libraries/utils",
 		"debug-peptidesredesigned": "grok publish --rebuild",
 		"release-peptidesredesigned": "grok publish --rebuild --release",
 		"build-peptidesredesigned": "webpack",
