@@ -7,19 +7,21 @@ export const _package = new DG.Package();
 
 //name: test
 export function test() {
-  const df = grok.shell.table('peptides');
-  const view = grok.shell.addTableView(df);
+  const properties = [
+    DG.Property.jsInt('age'),
+    DG.Property.jsString('sex'),
+    DG.Property.jsBool('control'),
+  ];
 
-  //view.ribbonMenu.
+  const items = [
+    {age: 28, sex: 'M', control: true},
+    {age: 35, sex: 'M', control: false},
+    {age: 56, sex: 'F', control: true},
+    {age: 30, sex: 'F', control: false},
+  ];
 
-  const menu = grok.shell.topMenu
-    .group('Custom')
-    .item('Foo!', () => grok.shell.info('Foo clicked'));
-}
+  const grid = DG.Grid.fromProperties(items, properties);
+  const view = grok.shell.addTableView(grid.dataFrame!);
 
-//name: peptidesEmbedding
-//description: Peptides embedding
-//top-menu: Peptides | Embedding
-export function peptidesEmbedding() {
-  grok.shell.info('Peptides | Embedding');
+  view.ribbonMenu.group('Peptides').item('First item', () => grok.shell.info('Item clicked'));
 }
