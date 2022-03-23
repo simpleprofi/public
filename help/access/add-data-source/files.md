@@ -98,6 +98,7 @@ For other file formats, you are prompted to download the file.
 ### Datagrok home directory
 
 Each Datagrok user has a home directory, which is accessible in the file browser under the name "Home". 
-The home directory is a file share mounted on the server. 
-You can use it to store and share files with other users. 
+The home directory is a connection to a file hosting (Amazon S3) that is created automatically when a user signs up. 
+You can use it to store files imported from your computer. 
+To upload a file, open the home directory in the Datagrok UI and drag and drop the file into it.
 
