@@ -41,32 +41,26 @@ You can define query metadata, input and output parameters for a query.
 
 ### Parameterized queries 
 
-A parameterized query is a query with one or more parameters. 
+A parameterized query is a query with one or more input parameters. 
 When you execute a parameterized query from the Datagrok UI, it prompts you to provide values for the parameters.  
 
+Query input parameters can have default values, be represented as choises in the UI, include reults from another query, etc. 
+For advanced use cases and in-depth examples, refer to the [Scription](/help/compute/scripting) section.
+
+
 Query parameters are defined as comments before the query text, in the following format:
+
 ```sql
 --input: <type> <name> {= <value>} {<option>: <value>; ...} [<description>] 
 ```
 
-* `<type>` is one of the following types:
-
-    |       |               |
-    |-----------|--------------------------|
-    | `int`     | Integer scalar     |
-    | `double`  | Float scalar       |
-    | `bool`    |  Boolean scalar    |
-    | `string`  | String             |
-    | `datetime`| DateTime           |         
-    | `dataframe` | ??  
-    | `list<T>` | A list of type T (only `string` is supported)| 
-
-* `<name>` -- the name of the query
-* `<value>` -- the default value
-* `{<option>: <value>; ...}` -- a list of options and their values 
-* `<description>` -- the description of the parameter 
-
-
+|  Parameter         |  Description             |
+|-----------|--------------------------|
+| `<type>`     |  One of the following data types: <ul><li>`int`</li><li>`double`</li><li>`bool`</li><li>`string`</li><li>`datetime`</li><li>`list<T>` -- a list of type `T` (only `string` is supported)</li></ul>     |
+| `<name>`  |  The name of the query.   |
+| `<value>`    |  The default value.    |
+|  `{<option>: <value>; ...}` |  A list of options and their values.            |
+|`<description>` |  The description of the parameter. The description shows up as a tooltip when you hover over the parameter name.  |
 
 
 Example of a query with one parameter:
@@ -75,4 +69,10 @@ Example of a query with one parameter:
 --input: string productName 
 select * from products where productname = @productName
 ```
+
+### Lists as input parameters
+
+
+### Suggested values
+
 

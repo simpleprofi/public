@@ -1,14 +1,11 @@
 # Web services
 
-
 Datagrok has out-of-the-box connectors to the following types of services:
 
 * OpenAPI-based APIs (Swagger)
 * OData-based REST APIs
 * RDF-based data (SPARQL)
 * Twitter
-
-
 
 
 ## OpenAPI-based APIs
@@ -60,7 +57,6 @@ Note that for different security schemes the dialog contains different input fie
 If the OpenAPI file does not define any security schemes, the properties dialog does not contain any input fields for credentials. 
 
 To open the connection properties dialog, right-click on the connection created from the OpenAPI file and select **Edit...**. 
-
 
 
 ![OpenAPI connection properties dialog](/help/images/access/openapi-connection-properties.png) 
@@ -169,7 +165,7 @@ paths:
           grok-datetime-format: yyyy-MM-ddT00-0000
 ```
 
-### Example
+### OpenAPI-based connection example
 
 ```yaml
 swagger: '2.0'

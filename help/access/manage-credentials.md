@@ -1,6 +1,5 @@
 # Manage connection credentials
 
-
 Typically, a connection to a data source requires access credentials. 
 You can provide credentials either manually or by using [AWS Secrets Manager](https://aws.amazon.com/secrets-manager/getting-started/).
 

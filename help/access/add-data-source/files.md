@@ -33,9 +33,9 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
 | ipynb         | Jupyter Notebook         |
 
 
-## Upload a file
+## Import a file
 
-You can upload a file into Datagrok from your computer. 
+You can import a file into Datagrok from your computer. 
 Simply drag and drop a file into the Datagrok UI or, from the menu, select **File** > **Open** > **File...**. Any supported file format is converted into a table and you can start analyzing your data right away.
 
 Note that the files imported to the Datagrok UI are not automatically uploaded to the server. The data stays in the browser, and Datagrok will lose the file when you close the browser tab.
