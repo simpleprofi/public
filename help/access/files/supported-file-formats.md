@@ -1,6 +1,6 @@
 # Supported file formats
 
-Datagrok makes  
+TODO: structured text (tabular format, json, xml), archives, chemical data, 
 
 | Extension     | Description              |
 |---------------|--------------------------|
