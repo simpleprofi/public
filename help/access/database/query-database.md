@@ -19,7 +19,7 @@ You can define query metadata, input and output parameters for a query.
 ## Parameterized queries 
 
 A parameterized query is a query with one or more input parameters. 
-When you execute a parameterized query from the Datagrok UI, it prompts you to provide values for the parameters.  
+When you execute a parameterized query from the Datagrok UI, it prompts you to provide values for the parameters.
 Each input parameter is presented as an input field.
 
 Query input parameters can have default values, be represented as multiple-choice options, include results from another query, etc. 
@@ -100,7 +100,7 @@ Example of a list with values returned by an existing data query:
 --input: string shipCountry = France {choices: Demo:northwind:countries}
 ```
 
-Here `Demo:northwind:countries` is a reference to a query named `countries` under connection `northwind` in package `Demo`.  
+Here `Demo:northwind:countries` is a reference to the query named `countries` under connection `northwind` in package `Demo`.  
 
 ### Input fields with suggestions 
 
@@ -111,3 +111,31 @@ To define a list of suggested values for an input field, use the `suggestions` o
 ```
 
 In this example, the list of suggestions is retrieved by executing an existing data query.  
+
+
+<!-- TODO:Re-using input parameters -->
+
+### Patterns 
+
+In cases when you want to execute a query with SQL operators (such as `<`, `>`, `BETWEEN`, etc.) multiple times but each time use a different operator, you can define a query where the operator itself is an input parameter.
+For such queries, Datagrok UI prompts you to select which operator to use and/or an optional input value.
+Such types of input parameters are called "patterns".
+In other words, patterns are input parameters that are transformed into SQL operators when you execute the query.
+
+When an input parameter is defined as a pattern, the input field for the parameter has a menu button (![menu icon](/help/images/menu-icon.png)) next to it, which displays a list of available patterns.
+The default list of patterns is predefined and depends on the type of input value.  
+
+![Patterns](/help/images/access/patterns.gif)
+
+
+
+
+
+Example:
+
+```sql
+--input: string lastname {pattern: string}
+select * from employees where @lastname(lastname) 
+```
+
+

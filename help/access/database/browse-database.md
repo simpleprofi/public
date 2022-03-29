@@ -43,7 +43,7 @@ Alternatively, select a table in the schema browser and navigate to the **Action
 
 ### Column actions
 
-To view column actions, select multiple columns while holding down the `Ctrl` key. 
+To view column actions (commands), select multiple columns while holding down the `Ctrl` key. 
 The list of action is displayed in the right-hand property panel. 
 
 ![Column actions](/help/images/access/column-actions.png)
