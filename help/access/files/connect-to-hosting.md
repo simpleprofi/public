@@ -39,4 +39,4 @@ Typically, you would need to provide access credentials and additional parameter
 ## See also
 
 * [Browse files](/help/access/files/browse-files.html)
-* [Share files and folders](todo)
+* [Share a connection](TODO)
