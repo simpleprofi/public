@@ -55,10 +55,9 @@ When you run this query, the following dialog appears:
 
 ### Lists as input parameters 
 
-Lists can only be used in SQL operators that take a range of values, such as `ANY` or `ALL`.
-
-TODO: use `list<string>` as the parameter type and enter a comma-separated list of values in the query dialog.
-
+You can define an input parameter of type `list<string>` which requires that the user enter a comma-separated list of values in the query dialog.  
+The given list of values can be used in the query.
+However, note that lists can only be used in SQL operators that take a range of values, such as `ANY` or `ALL`.
 
 Select customers from a specific list of countries:
 
@@ -122,20 +121,96 @@ For such queries, Datagrok UI prompts you to select which operator to use and/or
 Such types of input parameters are called "patterns".
 In other words, patterns are input parameters that are transformed into SQL operators when you execute the query.
 
-When an input parameter is defined as a pattern, the input field for the parameter has a menu button (![menu icon](/help/images/menu-icon.png)) next to it, which displays a list of available patterns.
-The default list of patterns is predefined and depends on the type of input value.  
+When an input parameter is defined as a pattern, the input field for the parameter has a menu button (![menu icon](/help/images/menu-icon.png)) next to it, which displays a list of available pattern strings.
+Available pattern string are predefined and depend on the data type of the parameter.  
 
 ![Patterns](/help/images/access/patterns.gif)
 
 
+Note that pattern strings are not always named after the operators they represent.
+The description of all pattern strings is given below.
 
+To define an input parameter based on a pattern:
 
-
-Example:
+1. Add a parameter of type `string` and use the `pattern: <pattern_type>` option in the parameter definition.
+2. In the query, add a reference to the parameter in the format `@paramName(<column>)`.  
 
 ```sql
---input: string lastname {pattern: string}
-select * from employees where @lastname(lastname) 
+--input: string paramName = <value> {pattern: <type>}
+select * from <table> where @paramName(<columnName>)
 ```
+
+For example:
+
+```sql
+--input: string lastNameParam {pattern: string}
+select * from employees where @lastNameParam(lastname) 
+```
+
+In this example, `lastNameParam` is a pattern of type `string`. 
+When you run the query, the drop-down menu for the input field contains the following values: 
+
+- `contains`
+- `starts with`  
+- `ends with` 
+- `regex` 
+- `in`
+
+If use select `starts with` and enter "Doe" in the input field, the query returns all employees whose last name starts with "Doe". 
+
+
+The following table lists the available values for each pattern type.
+
+
+| Type               | Value         | Description or Example       |
+|--------------------|---------------|------------------------------|
+| `num, int, double` | `=`           | `= 100`                      |
+|                    | `>`           | `> 1.02`                     |
+|                    | `>=`          | `>= 4.1`                     |
+|                    | `<`           | `< 5`                        |
+|                    | `<=`          | `<= 2`                       |
+|                    | `in`          | `in (1, 3, 10.2)`            |
+|                    | `min-max`     | `Range: 1.5-10.0`            |
+| `string`           | `contains`    | `contains ea`                |
+|                    | `starts with` | `starts with R`              |
+|                    | `ends with`   | `ends with w`                |
+|                    | `regex`       | `regex 1(\w+)1`              |
+|                    | `in`          | `in (ab, "c d", "e\\"f\\"")` |
+| `datetime`         | `anytime`     |                              |
+|                    | `today`       |                              |
+|                    | `this week`   |                              |
+|                    | `this month`  |                              |
+|                    | `this year`   |                              |
+|                    | `yesterday`   |                              |
+|                    | `last week`   |                              |
+|                    | `last month`  |                              |
+|                    | `last year`   |                              |
+|                    | `before`      | `before July 1984`           |
+|                    | `after`       | `after March 2001`           |
+|                    | `min-max`     | `Range: 1941-1945`           |
+
+
+
+## Visual queries 
+
+A visual query is an aggregation query that you build using the visual query builder.
+The visual query builder allows you to create an aggregation query and display results as a grid. 
+
+1. Open the Schema browser and navigate to the table you want to query.
+2. Right-click on the table and select **Visual query...**. 
+
+![Visual query](/help/images/access/visual-query.png)
+
+To create an aggregation query:
+
+1. In the **Columns** field, add table columns to pivot on (convert rows into columns).  
+2. In the **Rows** field, add table columns to group by. 
+3. In the **Measures** field, select the aggregation operation and the column. 
+4. In the **Filters** field, select a column and enter a filter condition for that column. 
+
+<!-- The result of the query is a table -->
+
+## See also
+
 
 

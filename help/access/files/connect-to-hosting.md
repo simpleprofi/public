@@ -8,7 +8,7 @@ Datagrok provides out-of-the-box connectors for the following file hosting servi
 * GitHub
 * Amazon S3
 
-All file hostings connected to Datagrok appear as folders in the [Datagrok file browser](/help/access/files/browse-files.html#file-browser).
+All file hosting services connected to Datagrok appear as folders in the [Datagrok file browser](/help/access/files/browse-files.html#file-browser).
 
 
 ## Connect to a file hosting 
@@ -30,7 +30,7 @@ This opens the **New file share** dialog.
 3. In the **Name** field, enter a name for the connection.  
 4. Enter connection parameters for the file hosting.
 The parameters vary depending on the type of file hosting.
-Typically, you would need to provide access credentials and additional parameters such as region and bucket name for cloud hostings.
+Typically, you would need to provide access credentials and additional parameters such as region and bucket name for cloud hosting service.
 
 5. In the **Dir** field, enter a directory path within the file hosting, or leave it empty to connect the root directory. 
 6. Click **TEST** to make sure you can connect to the file hosting, then click **OK** to save the connection.

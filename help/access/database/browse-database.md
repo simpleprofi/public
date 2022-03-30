@@ -55,6 +55,7 @@ The list of action is displayed in the right-hand property panel.
 
 
 
+## See also
 
-
+* [Query a database](/help/access/database/query-database.html)
 
