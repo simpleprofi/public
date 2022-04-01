@@ -9,12 +9,14 @@ import {Fingerprint} from "../utils/chem-common";
 import {chem} from "datagrok-api/grok";
 import Sketcher = chem.Sketcher;
 import {renderMolecule} from "../rendering/render-molecule";
+import { updateDivInnerHTML } from '../utils/ui-utils';
 
 export class ChemSimilarityViewer extends DG.JsViewer {
   moleculeColumn?: DG.Column;
   isEditedFromSketcher: boolean = false;
   hotSearch: boolean;
   sketchButton: HTMLButtonElement;
+  metricsDiv = ui.div();
   sketchedMolecule: string = "";
   distanceMetric: string;
   curIdx: number = 0;
@@ -26,6 +28,7 @@ export class ChemSimilarityViewer extends DG.JsViewer {
   fingerprint: string;
   gridSelect: boolean = false;
   targetMoleculeIdx: number = 0;
+  metricsProperties = ['distanceMetric', 'fingerprint'];
 
   get targetMolecule(): string {
     return this.isEditedFromSketcher
@@ -37,10 +40,10 @@ export class ChemSimilarityViewer extends DG.JsViewer {
     super();
     this.limit = this.int('limit', 10);
     this.minScore = this.float('minScore', 0.1);
-    this.distanceMetric = this.string('distanceMetric', 'Tanimoto', {choices: Object.keys(similarityMetric)});
+    this.distanceMetric = this.string('distanceMetric', Object.keys(similarityMetric)[0], {choices: Object.keys(similarityMetric)});
     this.fingerprint = this.string('fingerprint', 'Morgan', {choices: ['Morgan', 'RDKit', 'Pattern']});
     this.hotSearch = this.bool('hotSearch', true);
-    this.sketchButton = ui.button('Sketch', () => {
+    this.sketchButton = ui.button('Sketch reference', () => {
       const sketcher = new Sketcher();
       sketcher.setMolecule(this.targetMolecule);
       ui.dialog()
@@ -53,6 +56,19 @@ export class ChemSimilarityViewer extends DG.JsViewer {
         .show();
     });
     this.sketchButton.id = 'reference';
+    this.updateMetricsLink();
+  }
+
+  updateMetricsLink(){
+    const metricsButton = ui.button(`${this.distanceMetric}/${this.fingerprint}`, () => {
+      if (!grok.shell.windows.showProperties) {
+        grok.shell.windows.showProperties = true;
+      };
+      grok.shell.o = this;
+    });
+    metricsButton.style.fontSize = '10px';
+    metricsButton.style.fontWeight = 'normal';
+    updateDivInnerHTML(this.metricsDiv, metricsButton);
   }
 
   onTableAttached() {
@@ -71,6 +87,9 @@ export class ChemSimilarityViewer extends DG.JsViewer {
   }
 
   onPropertyChanged(property: Property): void {
+    if(this.metricsProperties.includes(property.name)) {
+      this.updateMetricsLink();
+    }
     super.onPropertyChanged(property);
     this.render();
   }
@@ -96,38 +115,47 @@ export class ChemSimilarityViewer extends DG.JsViewer {
       const panel = [];
       const grids = []; 
       let cnt = 0, cnt2 = 0;
-      panel[cnt++] = ui.h1('Reference');
-      panel[cnt++] = renderMolecule(this.targetMolecule);
-      panel[cnt++] = this.sketchButton;
+      panel[cnt++] = ui.divH([
+        this.sketchButton,
+        this.metricsDiv
+      ]);
+
       if (this.molCol && this.idxs && this.scores) {
         for (let i = 0; i < this.molCol.length; ++i) {
+          const idx = this.idxs.get(i);
+          const labelText = idx === this.targetMoleculeIdx ? 'Reference' : this.scores.get(i).toPrecision(2);
           let grid = ui.div([
             renderMolecule(this.molCol?.get(i)),
-            ui.label(`${this.scores.get(i).toPrecision(2)}`)],
-            {style: {width: '200px', height: '120px', margin: '5px'}}
+            ui.label(`${labelText}`)],
+            { style: { width: '200px', height: '120px', margin: '5px' } }
           );
           let divClass = 'd4-flex-col';
-          if (this.idxs.get(i) == this.curIdx) {
+          if (idx == this.curIdx) {
             divClass += ' d4-current';
             grid.style.backgroundColor = '#ddffd9';
-          } 
-          if (this.dataFrame!.selection.get(this.idxs.get(i))) {
+          }
+          if (idx == this.targetMoleculeIdx) {
+            divClass += ' d4-current';
+            grid.style.borderStyle = 'solid';
+            grid.style.borderWidth = 'thin';
+          }
+          if (this.dataFrame!.selection.get(idx)) {
             divClass += ' d4-selected';
             if (divClass == 'd4-flex-col d4-selected')
               grid.style.backgroundColor = '#f8f8df';
-            else 
+            else
               grid.style.backgroundColor = '#d3f8bd';
           }
           $(grid).addClass(divClass);
           grid.addEventListener('click', (event: MouseEvent) => {
             if (this.dataFrame && this.idxs) {
               if (event.shiftKey || event.altKey) {
-                this.dataFrame.selection.set(this.idxs.get(i), true);
+                this.dataFrame.selection.set(idx, true);
               } else if (event.metaKey) {
                 let selected = this.dataFrame.selection;
-                this.dataFrame.selection.set(this.idxs.get(i), !selected.get(this.idxs.get(i)));
+                this.dataFrame.selection.set(idx, !selected.get(idx));
               } else {
-                this.dataFrame.currentRowIdx = this.idxs.get(i);
+                this.dataFrame.currentRowIdx = idx;
                 this.gridSelect = true;
               }
             }
@@ -135,8 +163,8 @@ export class ChemSimilarityViewer extends DG.JsViewer {
           grids[cnt2++] = grid;
         }
       }
-      panel[cnt++] = ui.div(grids, {classes: 'd4-flex-wrap'});
-      this.root.appendChild(ui.div(panel, {style: {margin: '5px'}}));
+      panel[cnt++] = ui.div(grids, { classes: 'd4-flex-wrap' });
+      this.root.appendChild(ui.div(panel, { style: { margin: '5px' } }));
     }
   }
 }

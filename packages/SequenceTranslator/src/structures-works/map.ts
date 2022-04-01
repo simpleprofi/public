@@ -11,6 +11,26 @@ export const TECHNOLOGIES = {
   ASO_GAPMERS: 'For ASO Gapmers',
   SI_RNA: 'For 2\'-OMe and 2\'-F modified siRNA',
 };
+export const COL_NAMES = {
+  CHEMISTRY: 'Chemistry',
+  NUMBER: 'Number',
+  TYPE: 'Type',
+  CHEMISTRY_NAME: 'Chemistry Name',
+  INTERNAL_COMPOUND_ID: 'Internal compound ID',
+  IDP: 'IDP',
+  SEQUENCE: 'Sequence',
+  COMPOUND_NAME: 'Compound Name',
+  COMPOUND_COMMENTS: 'Compound Comments',
+  SALT: 'Salt',
+  EQUIVALENTS: 'Equivalents',
+  PURITY: 'Purity',
+  CPD_MW: 'Cpd MW',
+  SALT_MASS: 'Salt mass',
+  BATCH_MW: 'Batch MW',
+  SOURCE: 'Source',
+  ICD: 'ICD',
+  OWNER: 'Owner',
+};
 // interface CODES {
 // }
 export const MODIFICATIONS: {[index: string]: {left: string, right: string}} = {
@@ -49,7 +69,7 @@ export const map: {[synthesizer: string]:
             'name': 'Guanine',
             'weight': 329.21,
             'normalized': 'dG',
-            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C)[C@@H]1O',
+            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C[C@@H]1O',
           },
           'C': {
             'name': 'Cytosine',
@@ -75,7 +95,7 @@ export const map: {[synthesizer: string]:
             'name': 'Guanine',
             'weight': 329.21,
             'normalized': 'dG',
-            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C)[C@@H]1O',
+            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C[C@@H]1O',
           },
           'C': {
             'name': 'Cytosine',
@@ -139,7 +159,7 @@ export const map: {[synthesizer: string]:
             'name': 'Guanine',
             'weight': 329.21,
             'normalized': 'dG',
-            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C)[C@@H]1O',
+            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C[C@@H]1O',
           },
           'T': {
             'name': 'Tyrosine',
@@ -341,13 +361,13 @@ export const map: {[synthesizer: string]:
             'name': 'Guanine',
             'weight': 329.21,
             'normalized': 'dG',
-            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C)[C@@H]1O',
+            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C[C@@H]1O',
           },
           'dG': {
             'name': 'Guanine',
             'weight': 329.21,
             'normalized': 'dG',
-            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C)[C@@H]1O',
+            'SMILES': 'OC[C@H]1O[C@@H](N2C3N=C(N)NC(=O)C=3N=C2)C[C@@H]1O',
           },
           'T': {
             'name': 'Tyrosine',

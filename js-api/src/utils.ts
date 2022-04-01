@@ -1,10 +1,31 @@
 import {Balloon} from './widgets';
-import * as rxjs from 'rxjs';
 import {toDart, toJs} from './wrappers';
-import {Cell, Row} from './dataframe';
-import $ from "cash-dom";
+import {MARKER_TYPE} from "./const";
+import {Rect} from "./grid";
 
 let api = <any>window;
+
+export namespace Paint {
+  const tempCanvas = new HTMLCanvasElement();
+
+  /** Renders a marker */
+  export function marker(g: CanvasRenderingContext2D, markerType: MARKER_TYPE, x: number, y: number, color: number, size: number) {
+    api.grok_Paint_Marker(g, markerType, x, y, color, size);
+  }
+
+  /** Renders a PNG image from bytes */
+  export function pngImage(g: CanvasRenderingContext2D, bounds: Rect, imageBytes: Uint8Array) {
+    let r = new FileReader();
+    r.readAsBinaryString(new Blob([imageBytes]));
+    r.onload = function() {
+      let img = new Image();
+      img.onload = function() {
+        g.drawImage(img, bounds.x, bounds.y, bounds.width, bounds.height);
+      }
+      img.src = "data:image/jpeg;base64," + window.btoa(r.result as string);
+    };
+  }
+}
 
 export class Utils {
   /** @param {Iterable} iterable*/
@@ -31,6 +52,42 @@ export class Utils {
 
   static nullIfEmpty(s?: string) {
     return Utils.isEmpty(s) ? null : s;
+  }
+
+  /** Shows "Open File" dialog, and lets you process the result. */
+  static openFile(options: {accept: string, open: (file: File) => void}): void {
+    let input: HTMLInputElement = document.createElement('input');
+    input.type = 'file';
+    input.multiple = false;
+    input.accept = options.accept ?? '';
+    input.onchange = _this => {
+        options.open(input.files![0]);
+    };
+    input.click();
+  }
+
+  /** Shows "Open File" dialog, and lets you process the result. */
+  static openFileBytes(options: {accept: string, open: (bytes: Uint8Array) => void}): void {
+    Utils.openFile({
+      accept: options.accept,
+      open: (f) => {
+        var reader = new FileReader();
+        reader.onload = () => {
+          options.open(new Uint8Array(reader.result as ArrayBuffer));
+        };
+        reader.readAsArrayBuffer(f);
+      }
+    })
+  }
+
+  /** Downloads the specified content locally */
+  static download(filename: string, content: BlobPart, contentType?: string) {
+    contentType = contentType ?? 'application/octet-stream';
+    const a = document.createElement('a');
+    const blob = new Blob([content], {'type':contentType});
+    a.href = window.URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
   }
 }
 
@@ -294,7 +351,7 @@ export function _identityInt32(length: number): Int32Array {
 /**
  * Inspired by https://github.com/Yomguithereal/mnemonist/blob/master/lru-cache.js
  * */
-export class LruCache {
+export class LruCache<K = any, V = any> {
   private capacity: number;
   public onItemEvicted: Function | null;
   private items: {};
@@ -324,7 +381,7 @@ export class LruCache {
    * @param {number} pointer - Pointer of the value to splay on top.
    * @return {LruCache}
    */
-  splayOnTop(pointer: number) {
+  splayOnTop(pointer: number): LruCache<K, V> {
     let oldHead = this.head;
 
     if (this.head === pointer)
@@ -351,9 +408,8 @@ export class LruCache {
    * Checks whether the key exists in the cache.
    *
    * @param  {any} key   - Key.
-   * @return {boolean}
    */
-  has(key: any) {
+  has(key: any): boolean {
     return key in this.items;
   }
 
@@ -362,9 +418,8 @@ export class LruCache {
    *
    * @param  {any} key   - Key.
    * @param  {any} value - Value.
-   * @return {undefined}
    */
-  set(key: any, value: any) {
+  set(key: any, value: any): void {
 
     // The key already exists, we just need to update the value and splay on top
     // @ts-ignore
@@ -407,15 +462,14 @@ export class LruCache {
   /**
    * Gets the value attached to the given key, and makes it the most recently used item.
    *
-   * @param  {any} key   - Key.
-   * @return {any}
+   * @param  {any} key - Key.
    */
-  get(key: any) {
+  get(key: any): V | undefined {
     // @ts-ignore
     let pointer = this.items[key];
 
     if (typeof pointer === 'undefined')
-      return;
+      return undefined;
 
     this.splayOnTop(pointer);
 
@@ -430,9 +484,9 @@ export class LruCache {
    * @param  {Function} createFromKey - Function to create a new item.
    * @return {any}
    */
-  getOrCreate(key: any, createFromKey: any) {
+  getOrCreate(key: K, createFromKey: (key: K) => V): V {
     let value = this.get(key);
-    if (typeof value !== 'undefined')
+    if (value !== undefined)
       return value;
     else {
       let item = createFromKey(key);

@@ -80,6 +80,58 @@ const ColumnListProxy = new Proxy(class {
 );
 
 
+/** Column CSV export options */
+export interface ColumnCsvExportOptions {
+  /** Custom column format to be used */
+  format: string;
+
+  /** Additional options */
+  [index: string]: any;
+}
+
+
+/** Column name -> options */
+export interface ColumnsCsvExportOptions {
+  [index: string]: ColumnCsvExportOptions;
+}
+
+
+/** Csv export options to be used in {@link DataFrame.toCsv} */
+export interface CsvExportOptions {
+
+  /** Field delimiter; comma if not specified */
+  delimiter?: string;
+
+  /** New line character; \n if not specified */
+  newLine?: string;
+
+  /** Textual representation of the missing value. Empty string if not specified. */
+  missingValue?: string;
+
+  /** Whether the header row containing column names is included. True if not specified. */
+  includeHeader?: boolean;
+
+  /** Whether only selected columns are included. False if not specified. */
+  selectedColumnsOnly?: boolean;
+
+  /** Whether only filtered rows are included. Will be combined with [selectedRowsOnly]. */
+  filteredRowsOnly?: boolean;
+
+  /** Whether only selected rows are included. Will be combined with [filteredRowsOnly]. */
+  selectedRowsOnly?: boolean;
+
+  /** Column order */
+  columns?: string[];
+
+  /** Expands qualified numbers into two columns: `sign(column)` and `column` */
+  qualifierAsColumn?: boolean;
+
+  /** Column-specific formats (column name -> format).
+      For format examples, see [dateTimeFormatters]. */
+  columnOptions?: ColumnsCsvExportOptions;
+}
+
+
 /**
  * DataFrame is a high-performance, easy to use tabular structure with
  * strongly-typed columns of different types.
@@ -259,7 +311,7 @@ export class DataFrame {
     return toJs(api.grok_DataFrame_ColumnByName(this.dart, name));
   }
 
-  /** Returns a {@link Cell} with the specified name.
+  /** Returns a {@link Cell} with the specified row and column.
    * @param {number} idx - Row index.
    * @param {string} name - Column name.
    * @returns {Cell} */
@@ -277,10 +329,9 @@ export class DataFrame {
     return c;
   }
 
-  /** Exports the content to comma-separated-values format.
-   * @returns {string} */
-  toCsv(): string {
-    return api.grok_DataFrame_ToCsv(this.dart);
+  /** Exports the content to comma-separated-values format. */
+  toCsv(options?: CsvExportOptions): string {
+    return api.grok_DataFrame_ToCsv(this.dart, options);
   }
 
   /** Creates a new dataframe from the specified row mask and a list of columns.
@@ -820,6 +871,11 @@ export class Column {
     return api.grok_Column_GetRawDataDartium(this.dart);
   }
 
+  /** Linearly maps idx-th value to the [0,1] interval, where 0 represents column minimum, and 1 represents maximum. */
+  scale(idx: number): number {
+    return api.grok_Column_Scale(this.dart, idx);
+  }
+
   setRawData(rawData: Int32Array | Float32Array | Float64Array | Uint32Array, notify: boolean = true): void {
     api.grok_Column_SetRawData(this.dart, rawData, notify);
   }
@@ -1098,46 +1154,32 @@ export class ColumnList {
     return new Promise((resolve, reject) => api.grok_ColumnList_GetNewCalculated(this.dart, name, expression, type, treatAsString, (c: any) => resolve(toJs(c)), (e: any) => reject(e)));
   }
 
-  /** Adds a string column
-   * @param {string} name
-   * @returns {Column} */
+  /** Creates and adds a string column. */
   addNewString(name: string): Column { return this.addNew(name, TYPE.STRING); }
 
-  /** Adds a new integer column
-   * @param {string} name
-   * @returns {Column}
-   * {@link https://dev.datagrok.ai/script/samples/javascript/data-frame/modification/add-columns}
-   * */
+  /** Creates and adds an integer column
+   *  {@link https://dev.datagrok.ai/script/samples/javascript/data-frame/modification/add-columns} */
   addNewInt(name: string): Column { return this.addNew(name, TYPE.INT); }
 
-  /** Adds a new float column
-   * @param {string} name
-   * @returns {Column}
-   * */
+  /** Creates and adds a float column */
   addNewFloat(name: string): Column { return this.addNew(name, TYPE.FLOAT); }
 
-  /** Adds a new qualified number column
-   * @param {string} name
-   * @returns {Column}
+  /** Creates and adds a qualified number column
    * {@link https://dev.datagrok.ai/script/samples/javascript/data-frame/modification/add-columns}
    * */
   addNewQnum(name: string): Column { return this.addNew(name, TYPE.QNUM); }
 
-  /** Adds a new datetime column
-   * @param {string} name
-   * @returns {Column}
+  /** Creates and adds a datetime column
    * {@link https://dev.datagrok.ai/script/samples/javascript/data-frame/modification/add-columns}
    * */
   addNewDateTime(name: string): Column { return this.addNew(name, TYPE.DATE_TIME); }
 
-  /** Adds a new boolean column
-   * @param {string} name
-   * @returns {Column}
+  /** Creates and adds a boolean column
    * {@link https://dev.datagrok.ai/script/samples/javascript/data-frame/modification/add-columns}
    * */
   addNewBool(name: string): Column { return this.addNew(name, TYPE.BOOL); }
 
-  /** Adds a virtual column.
+  /** Creates and adds a virtual column.
    * @param {string} name
    * @param getValue - value constructor function that accepts int index and returns value
    * @param setValue - function that gets invoked when a column cell value is set

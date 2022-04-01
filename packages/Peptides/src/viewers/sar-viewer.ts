@@ -10,10 +10,6 @@ import {SARMultipleFilter} from '../utils/SAR-multiple-filter';
 
 /**
  * Structure-activity relationship viewer.
- *
- * @export
- * @class SARViewer
- * @extends {DG.JsViewer}
  */
 export class SARViewer extends DG.JsViewer {
   protected viewerGrid: DG.Grid | null;
@@ -37,11 +33,6 @@ export class SARViewer extends DG.JsViewer {
   // protected amountOfBestAARs: number;
   // duplicatesHandingMethod: string;
 
-  /**
-   * Creates an instance of SARViewer.
-   *
-   * @memberof SARViewer
-   */
   constructor() {
     super();
 
@@ -296,10 +287,6 @@ export class SARViewer extends DG.JsViewer {
 
 /**
  * Vertical structure activity relationship viewer.
- *
- * @export
- * @class SARViewerVertical
- * @extends {DG.JsViewer}
  */
 export class SARViewerVertical extends DG.JsViewer {
   viewerVGrid: DG.Grid | null;
