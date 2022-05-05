@@ -357,8 +357,8 @@ export class TableQuery extends DataQuery {
 
   /** Where clauses
    * @type {queryPartParams} */
-  get whereClauses(): queryPartParams { return api.grok_TableQuery_GetWhereClauses(this.dart); }
-  set whereClauses(wl: queryPartParams) { api.grok_TableQuery_SetWhereClauses(this.dart, wl); }
+  get whereClauses(): queryPartParams { return api.grok_TableQuery_GetWhereClausesDB(this.dart); }
+  set whereClauses(wl: queryPartParams) { api.grok_TableQuery_SetWhereClausesDB(this.dart, wl); }
 
   /** Aggregation clauses
    * @type {queryPartParams} */
@@ -383,7 +383,7 @@ export class TableQuery extends DataQuery {
   /** Creates {@link DbTableQueryBuilder} from {@link TableInfo}
    * @param {TableInfo} table - TableInfo object 
    * @returns {DbTableQueryBuilder} */
-  static fromTable(table: TableInfo): DbTableQueryBuilder {return toJs(api.grok_TableQuery_FromTable(table)); }
+  static fromTable(table: TableInfo): DbTableQueryBuilder {return toJs(api.grok_TableQuery_FromTable(table.dart)); }
 }
 
 /** Table query builder that works with database tables */
@@ -402,7 +402,7 @@ export class DbTableQueryBuilder {
    * @param {TableInfo} table - TableInfo object 
    * @returns {DbTableQueryBuilder} */
   static fromTable(table: TableInfo): DbTableQueryBuilder {
-    return toJs(api.grok_DbTableQueryBuilder_FromTable(table));
+    return toJs(api.grok_DbTableQueryBuilder_FromTable(table.dart));
   }
 
   /** Selects all fields of the table 
