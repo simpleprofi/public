@@ -14,12 +14,19 @@ predictive models, integration with the external utilities, data augmentation, a
 
 ## Table of contents
 
-* [Setting up the environment](#setting-up-the-environment)
-* [Semantic types](#semantic-types)
-* [Scripting and functions](#scripting-and-functions)
-    * [Scripting with server functions](#scripting-with-server-functions)
-    * [Modifying dataframes with scripts](#modifying-dataframes-with-scripts)
-    * [Scripting with client functions](#scripting-with-client-functions)
+- [Exercises](#exercises)
+  - [Table of contents](#table-of-contents)
+  - [Setting up the environment](#setting-up-the-environment)
+  - [Semantic types](#semantic-types)
+  - [Scripting and functions](#scripting-and-functions)
+    - [Scripting with server functions](#scripting-with-server-functions)
+    - [Modifying dataframes with scripts](#modifying-dataframes-with-scripts)
+    - [Scripting with client functions](#scripting-with-client-functions)
+  - [Querying databases](#querying-databases)
+  - [Creating a scripting viewer](#creating-a-scripting-viewer)
+  - [Transforming dataframes](#transforming-dataframes)
+  - [Custom cell renderers with 3-rd party js libraries](#custom-cell-renderers-with-3-rd-party-js-libraries)
+  - [Enhancing Datagrok with dialog-based functions](#enhancing-datagrok-with-dialog-based-functions)
 
 <!---
 * [Composing functions](#composing-functions)
@@ -28,13 +35,19 @@ predictive models, integration with the external utilities, data augmentation, a
 * Composing functions in the package
 --->
 
-* [Querying databases](#querying-databases)
-* [Creating a scripting viewer](#creating-a-scripting-viewer)
-* [Transforming dataframes](#transforming-dataframes)
-* [Custom cell renderers with 3-rd party JS libraries](#custom-cell-renderers-with-3-rd-party-js-libraries)
-* [Accessing Web services with OpenAPI](#accessing-web-services-with-openapi)
-* [Creating an info panel with a REST web service](#creating-an-info-panel-with-a-rest-web-service)
-* [Enhancing Datagrok with dialog-based functions](#enhancing-datagrok-with-dialog-based-functions)
+- [Exercises](#exercises)
+  - [Table of contents](#table-of-contents)
+  - [Setting up the environment](#setting-up-the-environment)
+  - [Semantic types](#semantic-types)
+  - [Scripting and functions](#scripting-and-functions)
+    - [Scripting with server functions](#scripting-with-server-functions)
+    - [Modifying dataframes with scripts](#modifying-dataframes-with-scripts)
+    - [Scripting with client functions](#scripting-with-client-functions)
+  - [Querying databases](#querying-databases)
+  - [Creating a scripting viewer](#creating-a-scripting-viewer)
+  - [Transforming dataframes](#transforming-dataframes)
+  - [Custom cell renderers with 3-rd party js libraries](#custom-cell-renderers-with-3-rd-party-js-libraries)
+  - [Enhancing Datagrok with dialog-based functions](#enhancing-datagrok-with-dialog-based-functions)
 
 <!---
 * Creating an application
@@ -55,21 +68,23 @@ Prerequisites: basic JavaScript knowledge.
 
 1. Install the necessary tools (Node.js, npm, webpack, datagrok-tools) following
    [these instructions](../develop.md#development)
-2. Get a dev key for [Dev Server](https://dev.datagrok.ai) (you will work with this server) and add it by
-   running `grok config`. User icon (at the lower left corner) / Summary / Developer key...
+2. 2. Get a dev key for [Dev Server](https://dev.datagrok.ai) (you will work with this server) and add it by running grok config. To get a key, follow the Dev Server [link](https://dev.datagrok.ai), click on User icon (at the lower left corner) -> Summary -> Developer key. While running grok config it may ask you for a public key, and local key. So do the same actions for public, and the local key is "admin".
 3. Create a default package [called](https://datagrok.ai/help/develop/develop#naming-conventions)
    `<yourFirstName>-sequence` using datagrok-tools: `grok create <yourFirstName>-sequence`
 4. Upload it to the server: `grok publish dev --rebuild` (see other options [here](../develop.md#deployment-modes))
 5. Launch the platform and run the package's `info()` function using different methods:
 
 * via the [Functions](https://dev.datagrok.ai/functions?q=info) view
+  <!---Add image here --->
+
 * via the [Packages](https://dev.datagrok.ai/packages?) menu (find your package, click on it and run `info()`
   from the `Functions` pane in the property panel on the left)
+  <!---Add image here --->
 * via the [console](../../overview/navigation.md#console): press `~` key anywhere inside Datagrok, the Console will
   appear to the right; execute `<loginName>Sequence:info()` there. The identifier used as package name (before ':') will
   be obtained by transformation kebab style of folder name to camel style, or can be specified directly with
   attribute `friendlyName` in `package.json` file.
-
+<!---Add image here --->
 As a result of the function execution you should see an info notification with url of package's webRoot.
 
 ## Semantic types
@@ -106,27 +121,25 @@ You will learn: how to write semantic type detectors, how to develop context-spe
 
    At this point, `dna_nucleotide` string does not have any meaning, but we will connect the dots later.
 
-3. <a name="detectors"></a> Define a `detectNucleotides` semantic type detector function as part of the special
-   `detectors.js` file.
+3. <a name="detectors"></a> Define a `detectNucleotides` semantic type detector function as part of the special   `detectors.js` file. To get a template for a detector function run `grok add detector detectNucleotides`. Create the class based on the example below:
 
-    ```javascript
-   class <yourFirstName>SequencePackageDetectors extends DG.Package {
+```
+class SequencePackageDetectors extends DG.Package {
+  //tags: semTypeDetector
+  //input: column col
+  //output: string semType
+  detectNucleotides(col) {
+    if (col.name.startsWith('nuc')) {
+      col.semType = 'nucleotides';
+      return col.semType;
+    }
+    return null;
+  }
+}
+```
+For best performance, don't iterate over all column values, instead iterate [on `column.categories`](https://datagrok.ai/help/develop/advanced/data-frame#work-with-categories). Full Datagrok Column type API could be found [here](https://datagrok.ai/help/develop/dataframe#dgcolumn).
 
-     //tags: semTypeDetector
-     //input: column col
-     //output: string semType
-     detectNucleotides(col) {
-         // your code goes here
-     }
-   }
-   ```
-
-   It should check whether a column is a string column, and whether each string represents a nucleotide. If condition is
-   met, it should return `"dna_nucleotide"` string.
-
-   For best performance, don't iterate over all column values, instead
-   iterate [on `column.categories`](https://datagrok.ai/help/develop/advanced/data-frame#work-with-categories)
-   . Full Datagrok Column type API could be found [here](https://datagrok.ai/help/develop/dataframe#dgcolumn).
+Tip: Check whether a column is a string column using col.Type and whether each string represents a nucleotide using col.name.startsWith or col.name === ‘specify the condition’. If condition is met, it should return `"dna_nucleotide"` string.
 
 4. Upload your package to `dev.datagrok.ai` using `grok publish dev --rebuild`
    command. When everything is done correctly, the `detectors.js` file will get loaded by the platform automatically,
@@ -156,6 +169,19 @@ You will learn: how to write semantic type detectors, how to develop context-spe
    the `dna_nucleotide` semantic type. To test it, simply open our test file, click on any cell in the `sequence`
    column, and find the `complement` property in the panel on the right as it is shown on screenshot:
    ![exercises-complement-data-panel](exercises-complement-data-panel.png)
+
+   Create Info panel code example:
+   
+```
+//name: Translation
+//tags: panel, widgets
+//input: file file (don’t forget to specify {semType : dna_nucleotide})
+//output: widget result
+//condition: isTextFile(file)
+export function translationPanel(file) {
+    return new DG.Widget(ui.divText("Lost in Translation"));
+}
+```
 
 ## Scripting and functions
 
@@ -488,7 +514,23 @@ from our server.
 9. Now, let's add this query to our package. Create a connection by running `grok add connection <yourFirstName>`, then,
    as instructed [here](../how-to/access-data.md#creating-queries), create the '.sql' file under the `queries`
    folder, and paste our query there. Give it a name by adding the `--name: ordersByCountry` line on top of it.
-10. Deploy the package, launch the platform, find the query in the package, and run it.
+
+   Specify parameters and credentials in <yourFirstName>.json. Here is the structure example:
+```
+“parameters”: {
+       “server”:  “dev.datagrok.ai”,
+       “port”: 54322,
+       “db”: “northwind”
+},
+“credentials”: {
+   “parameters”: {	
+        “login”: “datagrok”,
+        “password”: “datagrok”
+   }
+} 
+```
+10. Deploy the package, launch the platform, find the query in the package, and run it. To get the query working, send a POST request to the server. Use (https://dev.datagrok.ai/api/credentials/for/{<yourFirstName>Sequence}.{<yourFirstName>}) url. Include your API key in "Headers" and your login and password in body. 
+     <!---Add image here --->
 11. Create a JavaScript function (in `src/package.js`) that has no parameters and returns a dataframe with the results
     of the `ordersByCountry('USA')` call:
 
@@ -637,6 +679,7 @@ First, let's explore how scripting viewer works.
      resulting lines and bring them to a `g.canvas` in the `render` method with `g.canvas.getContext("2d").fillText`;
      learn more about HTML Canvas if it's new for you
    * Hint: pay attention to managing `line-height` both at computing the box and rendering text lines
+   The line-height property defines the space above and below the inline elements. Therefore, in the for-loop, designed for iterating through the resulting lines, you need to change the y-coordinate in order for lines not to cover each other.
 
      ```javascript
      class NucleotideBoxCellRenderer extends DG.GridCellRenderer {
@@ -837,6 +880,17 @@ be `coronavirus`, `influenza` etc.
     ```
 
    Re-use twice the `_fetchENASequence` function you've prepared previously.
+
+* Hint: _fetchENASequence(query, limit) is an async function. Therefore, when using function _fetchENASequence inside of another function you should use the operator await.  Otherwise function will return a promise instead of desired dataframe.
+```
+let df = await _fetchENASequence(query, limit);
+```
+limitInput and queryInput return an object. Therefore, you need to get values from inputs before passing them to the _fetchENASequence function.
+    
+```
+let limit = limitInput.value;
+let query = queryInput.value; 
+```
 
 3. In this first version we fetched `60` characters for a sequence. Add a new text field called `Sequece length`
    to let the user specify this trim length, set it `60` as a default.
