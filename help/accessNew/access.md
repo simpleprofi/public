@@ -1,8 +1,8 @@
-# Data access
+# Data access v.2
 
+The process of data analysis and data processing starts with getting the data. Datagrok provides an access to pretty much everything that is machine readable. Use it to access your local [files](), [databases](), and [web services](). ToDo: Add few more sentences here
 
-The process of data analysis and data processing starts with getting the data. Datagrok provides an access to pretty much everything that is machine readable. Use it to access your local [files](), [databases](), and [web services](). ToDo: Add more text here
-
+*note: If anything is missing, it could be implemented as a platform extension.*
 
 ## Data sources
 
@@ -16,33 +16,51 @@ In Datagrok you can access and operate with the data located on or produced by d
 * [Text](#Text)
 * [Functions](#Functions)
 
-## Supported data formats
-
-Datagrok supports the following data formats out of a box:
-
-| Extension     | Description              |
-|---------------|--------------------------|
-| csv, tsv, txt | Comma-separated file     |
-| xml           | XML                      |
-| json          | JSON                     |
-| HTML          | HTML                     |
-| xlsx          | Excel file               |
-| edf           | European Data Format     |
-| sas7bdat      | SAS                      |
-| kml, kmz      | Geographic annotations   |
-| rds, rda      | R Data Format            |
-| h5            | Hierarchical Data Format |
-| nc            | NetCDF                   |
-| mat           | MATLAB MAT               |
-| d42           | Datagrok project         |
-| zip           | ZIP                      |
-| gz, gzip      | gzip                     |
-| tar           | tar                      |
-| ipynb         | Jupyter Notebook         |
-
-In case you feel like the list above is not complete, do not hesitate to [drop us message](). We have a built-in tool that can extend Datagrok to understand your very custom format.
-
 ## Files
+
+Datagrok support a variety o file formats including tabular and molecular file formats. Here is the list:
+
+### Tabular formats
+
+| Extension  | Description                                      | 
+|------------|--------------------------------------------------|
+| .txt       | Plain text                                       | 
+| .csv       | Comma-separated values                           | 
+| .tsv       | Tab-separated values                             | 
+| .xml       | Extensible Markup Language                       | 
+| .json      | JavaScript Object Notation                       | 
+| .HTML      | HyperText Markup Language                        | 
+| .xlsx      | Excel                                            | 
+| .edf       | European Data Format                             | 
+| .sas7bdat  | SAS database file                                | 
+| .kml, .kmz | Keyhole Markup Language (geographic annotations) | 
+| .rds, .rda | R Data Format                                    | 
+| .h5        | Hierarchical Data Format                         | 
+| .nc        | NetCDF                                           | 
+| .mat       | MATLAB MAT                                       | 
+| .d42       | Datagrok [project](../overview/project.md)       | 
+| .zip       | ZIP archive                                      | 
+| .gz, .gzip | gzip                                             | 
+| .tar       | Tape archive                                     | 
+| .ipynb     | Jupyter Notebook                                 | 
+
+
+### Molecular formats
+
+| Extension | Description                        | 
+|-----------|------------------------------------|
+| .cif      | Crystallographic Information File  |
+| .pdb      | Protein Data Bank                  |
+| .pqr      | PQR                                |
+| .gro      | GROMACS                            |
+| .sdf      | Structure-data file                |
+| .mol      | MDL Molfile                        |
+| .mol2     | SYBYL molecule representation      |
+| .mmtf     | Macromolecular Transmission Format |
+
+note: for using molecular formats you'll need a nglviewer plugin
+
+### Working with files
 
 To start working with files you need to add them to Datagrok application first.
 
@@ -59,7 +77,7 @@ In order to add data stored in a cloud-based storage, you need to create a **Fil
 
 ### File share
 
-File share represents a connection between Datagrok and your files on a cloud storage. Once you create a file share your cloud-based data will appear in the **Files** folder
+File share represents a connection between Datagrok and your files on a cloud storage. Once you create a file share your cloud-based data will appear in the **Files** folder.
 
 To create a file share, do the following:
 
@@ -129,144 +147,108 @@ ___
 6. Enter the user name, group name, or email address of the user(s) you want to share your data table with
 7. Add an optional notification message, and click **OK**. Datagrok will send a link to your data table and notification message to the selected users automatically.
 
+**ADD**:
 
-## File
-
-
----
-* file share
 * file system browser->file system browser structure
 * file context menu
 * file access privileges
-* file sharing options
-* data preview pane->folder preview/file preview (not only tabular structure but also the code view with highligts)
-
----
-
-* Files
-
-All files in Datagrok are stored in a file system uploaded to Amazon server(accessible from a server).
-All your local files in Datagrok are stored under Data -> Files.
-
-
-To open a file -> drag and drop
-
-Note: This is the only step that can not be reproduced automatically
-
-All files are accessible in a form of file shares.
-
-To create a new file share Data->Files->Actions->New file share
-
-6 types of file shares: Dropbox, Git, Github, Google Cloud, Amazon S3.
-
-To create a file share: ****
-
-after entering the credentials your connection will be established and connection will be created.
-
-Local files are stored as Files connection type
+* data preview pane->folder preview/file preview (not only tabular structure but also the code view with highligts) (maybe)
 
 ## Databases
 
-___
+## Database connections
 
-* Create Database Connection
-* Share Database Conenction
-* Check permissions/details
-* Connect, explore, and work with Database
-___
+Datagrok provides a way to connect to pretty much any database out of the box. We support more than 30 of them, and its
+simple to add a new connector with some custom development.
 
-Datagrok provides a way to connect to pretty much any Database out of the box. Here is the list of support Databases:
+Adding a new connection is as simple as adding a [file share](). In a similar way, hit a
+`New Connection` command on the left, choose the type of the provider, and then depending on the provider different
+login credentials are required. Login credentials are stored in a separate secured vault in an encrypted way which can
+only be decrypted with your login credentials — we thought about it a lot.
 
-![](https://i.imgur.com/1wxEsK5.png)
+Also, all the connections to the databases as well as connections to file systems are also subject of privileges and
+security checks. Each connection and sharable object has a panel called "Sharing". Expand it to see who has privileges.
+It is easy to share it with a particular group or an individual and provide a level of access needed.
+
+## Exploring a database
+
+Once a connection to the database is created, there are multiple ways to connect, explore and work with that database.
+Let's look at what we could do on the exploration side.
+
+### Preview the table data
+
+Under each connection we see a Node.js called `Tables`. It all depends on the provider, where some providers also
+support `Schemas`. The simplest way is to simply click on the table and expand contents of it. By default, it shows the
+first 50 rows, so it isn't going to take a lot of time to load the data preview. We find it a very useful tool for just
+checking what is in the database. The content is in our dataframes and data spreadsheet, so that you can already do some
+basic data profiling already at that data preview. If the data contains some molecules or other user-defined types, we
+would see these data types rendered in the preview.
+
+### Explore columns
+
+In the below section properties for each column are displayed. In addition to some general information, such as names,
+types and additional metadata, there is also a way to quickly inspect it with the basic descriptive statistics.
+
+## Query the database visually
+
+### Querying by aggregation
+
+For example, let us do a couple of visual queries against the `Orders` table of the celebrated
+`Northwind` database. Let us right-click on the `Orders` table to which we navigated and select a `Visual Query`
+command. What this particular tool does is it lets you create an aggregation query against a particular table visually.
+
+While the functionality for joining tables is not yet available and comes later, it is often possible to add a view to
+the actual database and then interrogate this view from the `Visual Query`
+tool.
+
+Building an aggregate query is easy. Start with the `Measures` section. For example, we select an average of `freight`,
+and the result appears instantaneously. It is a nice way to explore datasets which don't fit in the browser's memory, or
+something where you know in advance what you are looking for.
+
+It is possible to change a measure of the aggregation by right-clicking on it and selecting the measure in interest,
+such as choosing a `sum` instead of an `avg`. Same applies to the column by which the aggregation is being computed.
+
+To group by different columns, use the `Rows` section of the dialog. For example, let us group by `Country` and then
+by `City`.
+
+### Data pivot
+
+On of the popular features when people query data is the ability to pivot it, essentially put values in columns. We
+support this feature with the `Columns` field. As an example, let us select the ...
+
+### Querying by joining
+
+Another popular way of querying the database is the one when you start with particular table and then join particular
+attributes using left join which are related to that table.
+
+For example, ...
+
+Right-click on the table and choose `Build Query`. Our platform figures out the schema of the database, and starting
+from that table it adds all the tables that could be reached by following the foreign keys.
+
+# DB exploration
+
+Datagrok supports visual exploration of relational databases for some of the database providers, including PostgreSQL,
+MySQL, MS SQL, Maria DB, and Oracle. If a provider supports it, you'll see '
+Browse schema' command for the corresponding connection:
+
+## Schema browser
+
+Schema browser visualizes all tables with all columns at once, giving you a high-level overview of the database. Click
+on a table to see its details in the property panel; it is also a good starting point for drill-downs and further
+exploration. The following quick actions are there:
+
+## Hierarchy browser
+
+Datagrok lets you visually explore both database schema and database content. Simply click on the item (
+such as connection, table, or column) in the "File | Connect to data" pane to bring up item's properties in
+the [property panel](../overview/navigation.md#properties).
 
 
-* 1
-* 2
-* 3
-* 4
+### Context actions for db columns
 
-Note: we can add a custom connector on request. (check the for developers section). 
-
-To create a new database connection Data->Files->Actions->Add new connection
-
-Note: Different login credentials aree required depending on the chosen data provider.
-
-Note: Login credentials are kept in a separate secured vault in an encrypted way that can only be encrypted with your login credentials (ASK Andrew).
-
-Pay attention to properties pane while selection any object in the database connection. You may check sharing option etc... there  
-
-To explore the table -> click on it and expand the content tab. By default it shows the first 50 rows
-
-You can also check properties for each column.
-
-Columns-> Inspect
-
-## Queries
-
-Note: You can share queries via url
-
-**Visual Queries**
-
-Visual queries are a good fit for queriyng databases that won't fit into memory or when you know exactly what you are looking for. Results are being diplayed instantly. 
-
-Here you have Columns Rows Measures Filters. Right click to modify option
-
-To make a visual query => Right click table -> Visual query.
-
-Then, you can either save it as a query or add a dataframe to the workspace.
-
-Can we now join multiple tables? How? What is interrogate? (Ask Andrew)
-
-Pivot column (Ask Andrew)
-
-Note: Datagrok uses the out of the box aggregations provided by database providers. But you can define custom aggregation functions to each provider using connectors (opensource git stuff).
-
-**Query Builder** is for combining tables
-
-**Parameterized Queries** 
-
-TODO: Make Query as a subtopic and include all types of queries there. 
-
-**Queries**
-
-How does query get to the Queries? Should you create one in some kind of query builder first? Is there a New query option? (Ask Andrew)
-
-To run a query: Data->Database->Select Database->Rightclick query->Run
-
-Parameter Patterns? (Ask Andrew)
-
-**Query Transformations**
-
-Note: Python script that accepts a table and returns a table can be used as transformation step.
-
-## Web services
-
-Has the collection of open api methods
-
-Import Open API or swagger file. -> Simply drag and drop. 
-
-Webservice credentials (where to get where to store? ask andrew)
-
-
-Note: you can check the previously used parameters by clicking on the <span style=" display: inline-block; width:20px;">![](https://i.imgur.com/4XSx1Jy.png)</span> icon.
-
-Data returned from response are returned in a way that API allows you and then Datagrok transforms it into a tabular 
-
-Note: there is custom processing.
-
-**Functions and scripts as data sources**
-
-Function generated data. Provide a short description. Link to **Functions**.
-
-Functions and scripts can be executed either in the browser or on a server. 
-
-You can include (for exmaple macroses with functions) in your dashboard. What is a dashboard? (ask Andrew)
-
-Script generated data. Provide a short description. Scripts vs Functions? (ask andrew or investigate) Link to scripts.
-
-**Dashboards**
-
-???
+In case you want to retrieve only some of the columns, select them (Shift+click) in the schema, and then use context
+actions that appear in the property panel
 
 ## Projects
 
@@ -299,7 +281,7 @@ In the "Upload project" dialog, a "Data sync" option appears next to the tables 
 This option determines whether the data should be stored as a static snapshot, or as a generation script. In the latter
 case, the function will be re-executed whenever the project is opened.
 
-![project-upload-data-sync](project-upload-data-sync.png)
+
 
 ### Project types
 
@@ -375,34 +357,19 @@ Options and commands:
 | Sync                | Force synchronization                                          |
 | Done                | Add the table to the workspace                                 |
 
+# Functions as data sources
 
-### Supported data source providers(probably change to logos)
+Functions or scripts could be executed differently from different places, they can also be executed in the browser or on
+the server.
 
-| Data Source Provider             |
-|----------------------------------|
-| Access                           |
-| Amazon S3                        |
-| Amazon Athena                    |
-| Amazon Redshift                  |
-| Google BigQuery                  |
-| Google Cloud                     |
-| Cassandra                        |
-| DB2                              |
-| Dropbox                          |
-| File Network Shares              |
-| Firebird                         |
-| HBase                            |
-| Hive                             |
-| MS SQL                           |
-| MariaDB                          |
-| MongoDB                          |
-| MySQL                            |
-| ODATA                            |
-| Oracle                           |
-| PostgreSQL                       |
-| SQLite                           |
-| [Socrata](edit-socrata-query.md) |
-| Sparql                           |
-| Teradata                         |
-| Twitter                          |
-| Vertica                          |
+## Generating demo datasets
+
+Let's look at the example. A function that returns a test dataset.
+
+## Obtaining outputs from the functions
+
+Any script written in Python or R.
+
+Example: mutate a molecule with a script. UI for the parameters is being generated automatically.
+
+Generation script when the data tables get reinstantiated. Basis for developing dashboards. Data sync.
