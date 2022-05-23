@@ -155,11 +155,6 @@ ___
 
 ## Databases
 
-* Create Database Connection
-* Share Database Conenction
-* Check permissions/details
-* Connect, explore, and work with Database
-___
 
 Datagrok provides a way to connect to pretty much any Database out of the box. Here is the list of supported Databases:
 
@@ -167,7 +162,7 @@ Datagrok provides a way to connect to pretty much any Database out of the box. H
 
 ### Database connections
 
-To access a database you need to create a database connection. The process is similar to creating a [file share][]: 
+To access a database you need to create a database connection. The process is similar to creating a [file share](): 
 
 ![](https://i.imgur.com/PID1CLa.gif)
 
@@ -211,11 +206,12 @@ Datagrok supports visual exploration of relational databases for some of the dat
 
 
 Schema browser visualizes all tables with all columns at once, giving you a high-level overview of the database. Click on a table to see its details in the property panel; it is also a good starting point for drill-downs and further exploration. 
+
 ![](https://i.imgur.com/jGyiZh6.gif)
 
 ### Context actions for db columns
 
-In case you want to retrieve only some of the columns, select them (Shift+click) in the schema, and then use context actions that appear in the property panel
+In case you want to retrieve only some of the columns, select them (Shift+click) in the schema, and then use context actions that appear in the property panel.
 
 ## Queries
 
@@ -275,6 +271,17 @@ How to work with a query builder:
 * Hit the checkboxes with the data you want to include
 * The preview of results is generated on the fly
 
+
+## Web Services
+
+
+In Datagrok you can work with API methods provided by Web Services that supports Open Api 2.0 and higher to receive and send data. To do so, import a Swagger (.yaml) file by dragging it into Datagrok view.
+
+![](https://i.imgur.com/rbqmtP2.gif)
+
+After dragging the files make sure that you fill out all the credentials. Then, you can double click on the selected method to send the request. In case of the GET request you will receive data transformed from the original response format (e.g. XML, or JSON) to the tabular view. 
+
+
 ## Projects
 
 Project is a collection of entities along with the applied visualizations. Projects are used to group and share data and other assets with other users. One of the most common applications of projects are [dashboards]() that consist of tables (with either static or dynamic data), and visualizations applied to them.
@@ -318,15 +325,51 @@ Possible actions:
 
 ### Filtering Projects
 
-The following fields could be used to filter projects with [smart search](smart-search.md):
+The following fields can be used to filter projects with the [smart search](smart-search.md):
 
-| Field        | Description                                 |
-|--------------|---------------------------------------------|
-| name         |                                             |
-| description  |                                             |
-| createdOn    |                                             |
-| updatedOn    |                                             |
-| author       | [User](../govern/user.md) object            |
-| starredBy    | [User](../govern/user.md) object            |
-| commentedBy  | [User](../govern/user.md) object            |
-| usedBy       | [User](../govern/user.md) object   
+* name
+* description
+* createdOn
+* updatedOn
+* author
+* starredBy
+* commentedBy
+* usedBy
+
+## Text
+
+Text functionality enables you to transform .csv files into a tabular data. 
+
+![](https://i.imgur.com/N5HGxqe.gif)
+
+Any changes made to the text or to the options are automatically applied, unless **Auto sync** option is off. The preview of the data is in the bottom pane.
+
+Datagrok tries to detect the .csv structure patterns automatically, so vast majority of the datasets can be imported by simply dragging that file into the browser window, or opening it via the **Menu -> File -> Open** (Ctrl+O hotkey).
+
+### Text structure options
+
+You can setup the .csv files structure options by using the options on the left hand side of the Text view. 
+
+Currently available text structure options:
+
+* **Delimeter** --- a sign that defines the start of the new column. Can be set to "comma", "tab", "semicolon", "space", and "pipe". Default value --- "Auto"
+* **New line** --- a sign that defines the start of the new line. Can be set to "\n" or "\r\n"
+* **Decimal separator** --- a sign used as a decimal separator. Can be set to "," or "."
+* **Thousands separator** --- a sign used as a thousands separator. Can be set to ',', ".", or " "
+* **Treat as nulls** --- the list of values that should be treated as **null**
+* **Headers** --- a flag that defines if the first line should be treated as a header
+* **Merge delimeters** --- a flag that defines if Datagrok should treat consecutive delimeters as one
+* **Autosync** --- a flag that defines if data frame should be parsed when the change is made
+
+## Functions 
+
+![](https://i.imgur.com/WAz6nAe.gif)
+
+You can use [functions]() to return data in Datagrok. A function can be written in any language. There are several options to get a tabular data using functions: 
+
+* [Call a method on the grok.data object]()
+* [Call a Datagrok package built-in function]()
+* [Call a data query function]()
+* [Call a script function]()
+
+Follow the [link]() to learn more about functions in Datagrok.
