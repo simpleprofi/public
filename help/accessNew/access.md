@@ -1,14 +1,13 @@
 # Data access v.2
 
-The process of data analysis and data processing starts with getting the data. Datagrok provides an access to pretty much everything that is machine readable. Use it to access your local [files](), [databases](), and [web services](). ToDo: Add few more sentences here
+The process of data analysis and data processing starts with getting the data. Datagrok provides an access to pretty much everything that is machine readable. Use it to access your [files][], [databases][], and [web services][]. ToDo: Add few more sentences here.
 
-*note: If anything is missing, it could be implemented as a platform extension.*
 
 ## Data sources
 
 In Datagrok you can access and operate with the data located on or produced by different data sources. Here is the list of currently available options:
 
-* [Files](#Files) 
+* [Files](#Files)
 * [Databases](#Databases)
 * [Web services](#Web-services)
 * [Queries](#Queries)
@@ -18,7 +17,7 @@ In Datagrok you can access and operate with the data located on or produced by d
 
 ## Files
 
-Datagrok support a variety o file formats including tabular and molecular file formats. Here is the list:
+Datagrok supports tabular and molecular file formats
 
 ### Tabular formats
 
@@ -38,12 +37,16 @@ Datagrok support a variety o file formats including tabular and molecular file f
 | .h5        | Hierarchical Data Format                         | 
 | .nc        | NetCDF                                           | 
 | .mat       | MATLAB MAT                                       | 
-| .d42       | Datagrok [project](../overview/project.md)       | 
+| .d42       | Datagrok project| 
 | .zip       | ZIP archive                                      | 
 | .gz, .gzip | gzip                                             | 
 | .tar       | Tape archive                                     | 
 | .ipynb     | Jupyter Notebook                                 | 
 
+___
+
+**Note:** there are plenty of scientific formats around and we have tools to extend list of supported formats with your very custom one. 
+___
 
 ### Molecular formats
 
@@ -58,7 +61,10 @@ Datagrok support a variety o file formats including tabular and molecular file f
 | .mol2     | SYBYL molecule representation      |
 | .mmtf     | Macromolecular Transmission Format |
 
-note: for using molecular formats you'll need a nglviewer plugin
+___
+
+**Note:** you will need a nglviewer plugin to work with molecular formats
+___
 
 ### Working with files
 
@@ -147,158 +153,156 @@ ___
 6. Enter the user name, group name, or email address of the user(s) you want to share your data table with
 7. Add an optional notification message, and click **OK**. Datagrok will send a link to your data table and notification message to the selected users automatically.
 
-**ADD**:
-
-* file system browser->file system browser structure
-* file context menu
-* file access privileges
-* data preview pane->folder preview/file preview (not only tabular structure but also the code view with highligts) (maybe)
-
 ## Databases
 
-## Database connections
+* Create Database Connection
+* Share Database Conenction
+* Check permissions/details
+* Connect, explore, and work with Database
+___
 
-Datagrok provides a way to connect to pretty much any database out of the box. We support more than 30 of them, and its
-simple to add a new connector with some custom development.
+Datagrok provides a way to connect to pretty much any Database out of the box. Here is the list of supported Databases:
 
-Adding a new connection is as simple as adding a [file share](). In a similar way, hit a
-`New Connection` command on the left, choose the type of the provider, and then depending on the provider different
-login credentials are required. Login credentials are stored in a separate secured vault in an encrypted way which can
-only be decrypted with your login credentials — we thought about it a lot.
+![](https://i.imgur.com/liHUT84.png)
 
-Also, all the connections to the databases as well as connections to file systems are also subject of privileges and
-security checks. Each connection and sharable object has a panel called "Sharing". Expand it to see who has privileges.
-It is easy to share it with a particular group or an individual and provide a level of access needed.
+### Database connections
 
-## Exploring a database
+To access a database you need to create a database connection. The process is similar to creating a [file share][]: 
 
-Once a connection to the database is created, there are multiple ways to connect, explore and work with that database.
-Let's look at what we could do on the exploration side.
+![](https://i.imgur.com/PID1CLa.gif)
 
-### Preview the table data
 
-Under each connection we see a Node.js called `Tables`. It all depends on the provider, where some providers also
-support `Schemas`. The simplest way is to simply click on the table and expand contents of it. By default, it shows the
-first 50 rows, so it isn't going to take a lot of time to load the data preview. We find it a very useful tool for just
-checking what is in the database. The content is in our dataframes and data spreadsheet, so that you can already do some
-basic data profiling already at that data preview. If the data contains some molecules or other user-defined types, we
-would see these data types rendered in the preview.
+* Navigates to Files➝Databases 
+* Click **Add New Connection** at the bottom of toolbox
+* Choose the provider type
+* Enter your credentials
+* Click **Test** to check your connection
+* Click **Ok** to confirm
 
-### Explore columns
+A data connection is associated with the access credentials. In Datagrok these credentials can be specified either [manually]() or by integrating with a [secret manager]().
 
-In the below section properties for each column are displayed. In addition to some general information, such as names,
-types and additional metadata, there is also a way to quickly inspect it with the basic descriptive statistics.
+### Share database connection and objects
 
-## Query the database visually
+Each database connection and each shareable object inside of it has a sharing option.
 
-### Querying by aggregation
+![](https://i.imgur.com/HkkW5nK.gif)
 
-For example, let us do a couple of visual queries against the `Orders` table of the celebrated
-`Northwind` database. Let us right-click on the `Orders` table to which we navigated and select a `Visual Query`
-command. What this particular tool does is it lets you create an aggregation query against a particular table visually.
+To share a connection or an object, do the following:
 
-While the functionality for joining tables is not yet available and comes later, it is often possible to add a view to
-the actual database and then interrogate this view from the `Visual Query`
-tool.
+* Once in Databases click on the connection or object you want to share
+* Expand **Sharing** menu on the **Properties panel** and click **Share**
+* Select the access right from the dropdown and a user or group to give the privileges
+* Click **Ok** to confirm
 
-Building an aggregate query is easy. Start with the `Measures` section. For example, we select an average of `freight`,
-and the result appears instantaneously. It is a nice way to explore datasets which don't fit in the browser's memory, or
-something where you know in advance what you are looking for.
 
-It is possible to change a measure of the aggregation by right-clicking on it and selecting the measure in interest,
-such as choosing a `sum` instead of an `avg`. Same applies to the column by which the aggregation is being computed.
+### Database exploration
 
-To group by different columns, use the `Rows` section of the dialog. For example, let us group by `Country` and then
-by `City`.
+Datagrok lets you visually explore both database schema and database content via Hierarchy browser. Click on the item (such as connection, table, or column) and expand **Content** option on the **Properties panel**.
 
-### Data pivot
+![](https://i.imgur.com/cPwVh9e.png)
 
-On of the popular features when people query data is the ability to pivot it, essentially put values in columns. We
-support this feature with the `Columns` field. As an example, let us select the ...
 
-### Querying by joining
+Datagrok supports visual exploration of relational databases for some of the database providers, including PostgreSQL, MySQL, MS SQL, Maria DB, and Oracle. If a provider supports it, you'll see **Browse schema** command for the corresponding connection:
 
-Another popular way of querying the database is the one when you start with particular table and then join particular
-attributes using left join which are related to that table.
+![](https://i.imgur.com/Xquo4pl.png)
 
-For example, ...
 
-Right-click on the table and choose `Build Query`. Our platform figures out the schema of the database, and starting
-from that table it adds all the tables that could be reached by following the foreign keys.
+### Schema browser
 
-# DB exploration
 
-Datagrok supports visual exploration of relational databases for some of the database providers, including PostgreSQL,
-MySQL, MS SQL, Maria DB, and Oracle. If a provider supports it, you'll see '
-Browse schema' command for the corresponding connection:
-
-## Schema browser
-
-Schema browser visualizes all tables with all columns at once, giving you a high-level overview of the database. Click
-on a table to see its details in the property panel; it is also a good starting point for drill-downs and further
-exploration. The following quick actions are there:
-
-## Hierarchy browser
-
-Datagrok lets you visually explore both database schema and database content. Simply click on the item (
-such as connection, table, or column) in the "File | Connect to data" pane to bring up item's properties in
-the [property panel](../overview/navigation.md#properties).
-
+Schema browser visualizes all tables with all columns at once, giving you a high-level overview of the database. Click on a table to see its details in the property panel; it is also a good starting point for drill-downs and further exploration. 
+![](https://i.imgur.com/jGyiZh6.gif)
 
 ### Context actions for db columns
 
-In case you want to retrieve only some of the columns, select them (Shift+click) in the schema, and then use context
-actions that appear in the property panel
+In case you want to retrieve only some of the columns, select them (Shift+click) in the schema, and then use context actions that appear in the property panel
+
+## Queries
+
+Data query defines which data should be extracted from the data source. For databases, that would typically be the SQL query; for Excel file, that would be sheet name, etc.
+
+Queries can be executed either manually, or as part of the [Data Job](data-job.md). The result of executing a query is represented by the [Function Call](../overview/functions/function-call.md).
+
+### Add a query
+
+![](https://i.imgur.com/yExrUXP.gif)
+
+
+* Select the database and open the context menu
+* Choose **Add a query**
+* Add query into the query editor
+* Click on the green **Run** button at the top
+* If you want to save the query --- set its name.
+* Click **Save** to save the query for the future usage. You will be able to find it under the **Queries** tab.
+
+### Share a query
+
+![](https://i.imgur.com/bZXyN40.gif)
+
+* Click on the query and open the context menu
+* Choose **Share**
+* Enter the user name or a group name
+* Click **Ok** to confirm
+
+___
+**Note:** you can also share a query by using the query url. Before sending, make sure that the user you are sharing a url with does have a permission to access your query.
+___
+
+### Visual query
+
+Visual query tool allow you to build a query with the help of visual interface.
+
+![](https://i.imgur.com/XbnJsmT.gif)
+
+* Choose columns you want to work with from the **Columns** dropdown
+* Select the grouping option in the **Rows**
+* Modify **Measures** as needed
+* Set **Filters**
+
+You receive the results immediately after modifying the query. The actual data aggregation is performed on a server. This feature is supported for all relational [data connectors](data-connection.md).
+
+### Query builder 
+
+Query builder helps to build a query for multiple tables using visual interface.
+
+![](https://i.imgur.com/2QUnT1H.gif)
+
+How to work with a query builder:
+
+* Select a database table
+* Open the context menu
+* Choose **Build query**
+* Hit the checkboxes with the data you want to include
+* The preview of results is generated on the fly
 
 ## Projects
 
-Project is a collection of entities along with the applied visualizations. Projects are used to group and share data and
-other assets with other users. One of the most common applications of projects are dashboards that consist of tables (
-with either static or dynamic data), and visualizations applied to them.
+Project is a collection of entities along with the applied visualizations. Projects are used to group and share data and other assets with other users. One of the most common applications of projects are [dashboards]() that consist of tables (with either static or dynamic data), and visualizations applied to them.
 
-### Uploading a project
+### Create a project
 
-Creating a project is easy. After getting the data of interest in the scratchpad project in [workspace](workspace.md),
-click on the `UPLOAD` button. After the project gets uploaded to the server, a separate window pops us asking you whom
-to share the project with. By default, it is only accessible by you, you have to share it in order for others to use it.
 
-Or, if you are editing an existing project, click `SAVE` to save your changes.
+![](https://i.imgur.com/XNXb7rw.gif)
 
-Use `Share` context action to edit access permissions. Sharing a project will automatically share all entities and data
-inside.
+* Open the data of interest
+* Navigate to **Projects** on the sidebar
+* Find your project under the strachpad and click **Upload**
+* Set the project name and click **Ok**
+* In case you want to share the project while uploading, select the users or groups you want to share it with and click **Ok**
+
+___
+**Note:** you can also create and share your project by clicking share icon located on the toolbox under the **File** menu
+___
 
 ### Dynamic data
 
-Whenever a table is created by executing a [function](../overview/functions)
-(such as a [database query](../access/data-query.md)), this information gets stored with the table as a "generation
-script". This serves multiple purposes:
-
-* Provides data lineage
-* On-demand data refreshing (Table toolbox, "Query" panel, `REFRESH` button)
-* Enables publishing dashboards with the dynamic data
-
-In the "Upload project" dialog, a "Data sync" option appears next to the tables that have a generation script defined.
-This option determines whether the data should be stored as a static snapshot, or as a generation script. In the latter
-case, the function will be re-executed whenever the project is opened.
-
-
+In the "Upload project" dialog, a "Data sync" option appears next to the tables that have a generation script defined. This option determines whether the data should be stored as a static snapshot, or as a generation script. In the latter case, the function will be re-executed whenever the project is opened.
 
 ### Project types
 
-Projects are organized in a tree structure. Rights on particular [entities](objects.md) are inherited based on this
-hierarchy. There are two main types of projects: _root_ and _regular_. Root projects can contain one or more non-root
-projects, for example, the link `Demo:CoffeeCompany`
-indicates that the `CoffeeCompany` project is part of the root project `Demo`. Any link to an entity on the platform
-starts with the root project. And since an entity can have only one canonic address, other related projects will
-reference the link rather than the entity itself. This fact becomes important in the context of regular projects. As the
-name suggests, they are the most common ones
-(that's what users create by default). Entities from such a project belong to the higher-level namespace, which means
-they are tied to the root project. To find out where an entity comes from, see `Links` in the `Details` tab of the
-property panel.
+Projects are organized in a tree structure. Rights on particular [entities](objects.md) are inherited based on this hierarchy. There are two main types of projects: _root_ and _regular_. Root projects can contain one or more non-root projects, for example, the link `Demo:CoffeeCompany` indicates that the `CoffeeCompany` project is part of the root project `Demo`. Any link to an entity on the platform starts with the root project. And since an entity can have only one canonic address, other related projects will reference the link rather than the entity itself. This fact becomes important in the context of regular projects. As the name suggests, they are the most common ones (that's what users create by default). Entities from such a project belong to the higher-level namespace, which means they are tied to the root project. To find out where an entity comes from, see `Links` in the `Details` tab of the property panel.
 
-Root projects are automatically created for users and packages. When the user uploads a project, it gets saved to their
-namespace. However, the existing entities will be available in the user's project via link. As for packages, each
-version has its own project, which allows sharing packages on a version level.
+Root projects are automatically created for users and packages. When the user uploads a project, it gets saved to their namespace. However, the existing entities will be available in the user's project via link. As for packages, each version has its own project, which allows sharing packages on a version level.
 
 ### Project gallery
 
@@ -306,15 +310,13 @@ Browse projects that are available to you. Use [Smart search](smart-search.md) f
 
 Click on the context menu to the left of the search box to control sort order, as well as access your recent searches.
 
-Controls:
+Possible actions:
 
-|              |                        |
-|--------------|------------------------|
-| Click        | Show in property panel |
-| Right click  | Context menu           |
-| Double click | Open                   |
+* Click --- Show in property panel
+* Right click --- Open context menu
+* Double click --- Open project
 
-### Filtering
+### Filtering Projects
 
 The following fields could be used to filter projects with [smart search](smart-search.md):
 
@@ -327,49 +329,4 @@ The following fields could be used to filter projects with [smart search](smart-
 | author       | [User](../govern/user.md) object            |
 | starredBy    | [User](../govern/user.md) object            |
 | commentedBy  | [User](../govern/user.md) object            |
-| usedBy       | [User](../govern/user.md) object            |
-
-
-## Text
-
-# Import text
-
-Use this feature for finer control of the import options, as well as text editing.
-
-Any changes made to the text or to the options are automatically applied, unless 'Auto sync' option is off. The preview
-of the data is in the bottom pane.
-
-Datagrok tries to auto-detect parameters automatically, so vast majority of the datasets can be imported by simply
-dragging that file into the browser window, or opening it via the **File | Open (
-Ctrl+O)** command.
-
-Options and commands:
-
-|                     |                                                                |
-|---------------------|----------------------------------------------------------------|
-| Delimiter           | Field separator                                                |
-| New line            | New line                                                       |
-| Decimal separator   | Decimal separator                                              |
-| Thousands separator | Thousands separator                                            |
-| Headers             | Treat first line as headers                                    |
-| Auto sync           | Parse data on every change (might be slow if the table is big) |
-| Load                | Load file                                                      |
-| Sync                | Force synchronization                                          |
-| Done                | Add the table to the workspace                                 |
-
-# Functions as data sources
-
-Functions or scripts could be executed differently from different places, they can also be executed in the browser or on
-the server.
-
-## Generating demo datasets
-
-Let's look at the example. A function that returns a test dataset.
-
-## Obtaining outputs from the functions
-
-Any script written in Python or R.
-
-Example: mutate a molecule with a script. UI for the parameters is being generated automatically.
-
-Generation script when the data tables get reinstantiated. Basis for developing dashboards. Data sync.
+| usedBy       | [User](../govern/user.md) object   
